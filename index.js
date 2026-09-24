@@ -4636,12 +4636,12 @@ function buildTrustedMemberRow(member) {
       .setCustomId(`room_trusted_name:${member.id}`)
       .setLabel(safeMemberName(member).slice(0, 80) || member.id)
       .setEmoji('❤️')
-      .setStyle(ButtonStyle.Success)
+      .setStyle(ButtonStyle.Primary)
       .setDisabled(true),
     new ButtonBuilder()
       .setCustomId(`room_untrust_member:${member.id}`)
       .setEmoji('❌')
-      .setStyle(ButtonStyle.Danger)
+      .setStyle(ButtonStyle.Secondary)
   );
 }
 
@@ -4656,49 +4656,46 @@ async function getTrustedGuildMembers(channel) {
 }
 
 async function buildRoomAuxPayloads(channel, room) {
-  const members = await getTrustedGuildMembers(channel);
   const regionRow = await buildRegionSelectRow(channel);
   const memberRow = buildMemberSelectRow();
-  const firstPageSize = 3;
-  const continuationPageSize = 5;
-  const firstMembers = members.slice(0, firstPageSize);
   const container = new ContainerBuilder()
     .setAccentColor(0x8899E8)
     .addActionRowComponents(regionRow)
-    .addActionRowComponents(memberRow)
-    .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent('### ・❥・❤️ NGƯỜI TIN CẬY ❤️・❥・')
-    );
+    .addActionRowComponents(memberRow);
 
-  if (!firstMembers.length) {
-    container.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent('Chưa có thành viên Tin cậy.')
-    );
-  } else {
-    for (const member of firstMembers) {
-      container.addActionRowComponents(buildTrustedMemberRow(member));
-    }
-  }
-
-  const payloads = [{
+  return [{
     components: [container],
     flags: MessageFlags.IsComponentsV2,
     allowedMentions: { parse: [] }
   }];
+}
 
-  const remaining = members.slice(firstPageSize);
-  for (let offset = 0; offset < remaining.length; offset += continuationPageSize) {
-    const pageMembers = remaining.slice(offset, offset + continuationPageSize);
-    const continuation = new ContainerBuilder()
-      .setAccentColor(0x8899E8)
+async function buildRoomTrustedPayloads(channel) {
+  const members = await getTrustedGuildMembers(channel);
+  const pageSize = 5;
+  const pages = members.length ? Math.ceil(members.length / pageSize) : 1;
+  const payloads = [];
+
+  for (let page = 0; page < pages; page += 1) {
+    const pageMembers = members.slice(page * pageSize, (page + 1) * pageSize);
+    const container = new ContainerBuilder()
+      .setAccentColor(0xA7B8FF)
       .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent('### ・❥・❤️ NGƯỜI TIN CẬY ❤️・❥・')
+        new TextDisplayBuilder().setContent('## ・❥・❤️ NGƯỜI TIN CẬY ❤️・❥・')
       );
-    for (const member of pageMembers) {
-      continuation.addActionRowComponents(buildTrustedMemberRow(member));
+
+    if (!pageMembers.length) {
+      container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent('**Chưa có thành viên Tin cậy.**')
+      );
+    } else {
+      for (const member of pageMembers) {
+        container.addActionRowComponents(buildTrustedMemberRow(member));
+      }
     }
+
     payloads.push({
-      components: [continuation],
+      components: [container],
       flags: MessageFlags.IsComponentsV2,
       allowedMentions: { parse: [] }
     });
@@ -5021,18 +5018,18 @@ async function refreshRoomPanelSafe(
       const allAux = await findRoomAuxMessages(channel);
       await deleteDuplicatePanels(allAux, auxMessage.id);
 
-      const continuationPayloads = auxPayloads.slice(1);
-      for (let i = 0; i < continuationPayloads.length; i += 1) {
-        const payload = continuationPayloads[i];
+      const trustedPayloads = await buildRoomTrustedPayloads(channel);
+      for (let i = 0; i < trustedPayloads.length; i += 1) {
+        const trustedPayload = trustedPayloads[i];
         const existing = continuationMessages[i];
         if (existing) {
-          try { await existing.edit(payload); }
-          catch { continuationMessages[i] = await channel.send(payload); }
+          try { await existing.edit(trustedPayload); }
+          catch { continuationMessages[i] = await channel.send(trustedPayload); }
         } else {
-          continuationMessages[i] = await channel.send(payload);
+          continuationMessages[i] = await channel.send(trustedPayload);
         }
       }
-      for (let i = continuationPayloads.length; i < continuationMessages.length; i += 1) {
+      for (let i = trustedPayloads.length; i < continuationMessages.length; i += 1) {
         try { await continuationMessages[i].delete(); } catch {}
       }
 
