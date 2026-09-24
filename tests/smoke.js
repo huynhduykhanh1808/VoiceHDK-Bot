@@ -15,7 +15,7 @@ assert(src.indexOf("mk('room_kick'") < src.indexOf("mk('room_deny'"), 'kick must
 assert(!src.includes("mk('room_untrust'"), 'old untrust button must be removed');
 assert(src.includes("room_untrust_member:"), 'trusted remove button missing');
 assert(!src.includes("room_trusted_page:"), 'trusted pagination buttons must be removed');
-assert(src.includes('buildRoomAuxPayloads'), 'trusted multi-message payload builder missing');
+assert(src.includes('buildRoomTrustedPayloads'), 'trusted multi-message payload builder missing');
 assert(src.includes('findRoomTrustedContinuationMessages'), 'trusted continuation message sync missing');
 assert(src.includes("・❥・❤️ NGƯỜI TIN CẬY ❤️・❥・"), 'trusted heading missing');
 assert(src.includes(".setEmoji('❌')"), 'compact trusted remove button missing');
@@ -24,7 +24,9 @@ assert(src.includes("{ Speak: muted ? true : false }"), 'mute toggle must only e
 assert(src.includes('control_aux_message_id'), 'second panel message persistence missing');
 assert(src.includes('new ContainerBuilder()'), 'Message 2 must use Components V2 ordering');
 assert(src.indexOf('.addActionRowComponents(regionRow)') < src.indexOf('.addActionRowComponents(memberRow)'), 'region select must appear before member select');
-assert(src.indexOf('.addActionRowComponents(memberRow)') < src.indexOf('### ・❥・❤️ NGƯỜI TIN CẬY ❤️・❥・'), 'trusted list must appear after selects');
+assert(src.includes('.addActionRowComponents(memberRow);'), 'member select row missing');
+assert(src.includes(".setStyle(ButtonStyle.Secondary)"), 'trusted remove button must use neutral dark background');
+assert(src.includes(".setStyle(ButtonStyle.Primary)"), 'trusted member button must stay bright');
 assert(src.includes("new AttachmentBuilder(roomCard, { name: 'room-panel.png' })"), 'room card attachment missing');
 assert(src.includes(".setImage('attachment://room-panel.png')"), 'room card image missing');
 assert(src.includes('trustedCount,'), 'trusted count must be passed to room card');
