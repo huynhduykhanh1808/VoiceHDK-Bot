@@ -49,6 +49,7 @@ function fitFont(
   }
 
   ctx.font = `${weight} ${size}px sans-serif`;
+
   return size;
 }
 
@@ -67,6 +68,7 @@ function cleanCanvasText(text) {
 
 function hexToRgba(hex, alpha) {
   const value = parseInt(hex.slice(1), 16);
+
   const r = (value >> 16) & 255;
   const g = (value >> 8) & 255;
   const b = value & 255;
@@ -122,6 +124,7 @@ function drawHeart(
   glow = 0
 ) {
   ctx.save();
+
   ctx.translate(x, y);
 
   if (flip) {
@@ -831,11 +834,11 @@ function drawIcon(
     drawHeart(
       ctx,
       x + size * 0.50,
-      y + size * 0.47,
-      size * 0.36,
+      y + size * 0.46,
+      size * 0.48,
       gradient,
       false,
-      4
+      5
     );
   } else if (type === 'lock') {
     ctx.beginPath();
@@ -1144,11 +1147,8 @@ async function renderRoomCard({
   const ctx =
     canvas.getContext('2d');
 
-  const width =
-    DESIGN_WIDTH;
-
-  const height =
-    DESIGN_HEIGHT;
+  const width = DESIGN_WIDTH;
+  const height = DESIGN_HEIGHT;
 
   const background =
     ctx.createLinearGradient(
