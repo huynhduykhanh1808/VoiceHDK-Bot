@@ -2,6 +2,31 @@
 
 const cache = new Map();
 
+/* =========================================================
+ * DESIGN SIZE
+ *
+ * Thiết kế gốc: 760 x 820
+ * Output mới:   912 x 984
+ *
+ * Toàn bộ card lớn hơn đúng 20%.
+ * ======================================================= */
+
+const DESIGN_WIDTH = 760;
+const DESIGN_HEIGHT = 820;
+
+const SCALE = 1.20;
+
+const OUTPUT_WIDTH =
+  Math.round(DESIGN_WIDTH * SCALE);
+
+const OUTPUT_HEIGHT =
+  Math.round(DESIGN_HEIGHT * SCALE);
+
+
+/* =========================================================
+ * THEME
+ * ======================================================= */
+
 const THEME = {
   blue: '#3D8DFF',
   cyanBlue: '#58B8FF',
@@ -19,8 +44,10 @@ const THEME = {
 
   open: '#63C7FF',
   locked: '#A96AFF',
+
   public: '#789DFF',
   hidden: '#A86CFF',
+
   region: '#B080FF',
 
   backgroundStart: '#101522',
@@ -41,21 +68,28 @@ function fitFont(
   minSize = 18,
   weight = 700
 ) {
-  const value = String(text ?? '');
+  const value =
+    String(text ?? '');
 
-  let size = startSize;
+  let size =
+    startSize;
 
   while (size > minSize) {
-    ctx.font = `${weight} ${size}px sans-serif`;
+    ctx.font =
+      `${weight} ${size}px sans-serif`;
 
-    if (ctx.measureText(value).width <= maxWidth) {
+    if (
+      ctx.measureText(value).width <=
+      maxWidth
+    ) {
       break;
     }
 
     size--;
   }
 
-  ctx.font = `${weight} ${size}px sans-serif`;
+  ctx.font =
+    `${weight} ${size}px sans-serif`;
 
   return size;
 }
@@ -69,19 +103,40 @@ function cleanCanvasText(text) {
   return String(text ?? '')
     .normalize('NFC')
 
-    .replace(/\p{Extended_Pictographic}/gu, '')
+    .replace(
+      /\p{Extended_Pictographic}/gu,
+      ''
+    )
 
-    .replace(/[\uFE0E\uFE0F]/gu, '')
+    .replace(
+      /[\uFE0E\uFE0F]/gu,
+      ''
+    )
 
-    .replace(/[\u200B-\u200D\u2060\uFEFF]/gu, '')
+    .replace(
+      /[\u200B-\u200D\u2060\uFEFF]/gu,
+      ''
+    )
 
-    .replace(/\uFFFD/gu, '')
+    .replace(
+      /\uFFFD/gu,
+      ''
+    )
 
-    .replace(/[□■▪▫▢▣▤▥▦▧▨▩]/gu, '')
+    .replace(
+      /[□■▪▫▢▣▤▥▦▧▨▩]/gu,
+      ''
+    )
 
-    .replace(/[\u0000-\u001F\u007F-\u009F]/gu, '')
+    .replace(
+      /[\u0000-\u001F\u007F-\u009F]/gu,
+      ''
+    )
 
-    .replace(/\s+/g, ' ')
+    .replace(
+      /\s+/g,
+      ' '
+    )
 
     .trim();
 }
@@ -107,7 +162,10 @@ function createGradient(
       y2
     );
 
-  function rgba(hex, a) {
+  function rgba(
+    hex,
+    a
+  ) {
     const value =
       parseInt(
         hex.slice(1),
@@ -123,27 +181,41 @@ function createGradient(
     const b =
       value & 255;
 
-    return `rgba(${r}, ${g}, ${b}, ${a})`;
+    return (
+      `rgba(${r}, ${g}, ${b}, ${a})`
+    );
   }
 
   gradient.addColorStop(
     0,
-    rgba(THEME.blue, alpha)
+    rgba(
+      THEME.blue,
+      alpha
+    )
   );
 
   gradient.addColorStop(
     0.36,
-    rgba(THEME.indigo, alpha)
+    rgba(
+      THEME.indigo,
+      alpha
+    )
   );
 
   gradient.addColorStop(
     0.70,
-    rgba(THEME.purple, alpha)
+    rgba(
+      THEME.purple,
+      alpha
+    )
   );
 
   gradient.addColorStop(
     1,
-    rgba(THEME.violet, alpha)
+    rgba(
+      THEME.violet,
+      alpha
+    )
   );
 
   return gradient;
@@ -272,11 +344,11 @@ function drawTinyDiamond(
 /* =========================================================
  * SOFT ORNAMENT
  *
- * Canvas version:
+ * Mô phỏng:
  *
  * ⊹₊˚‧︵‿₊୨ ♥ ୧₊‿︵‧˚₊⊹
  *
- * Không dùng ký tự Unicode thật.
+ * Vẽ bằng Canvas để không lỗi font.
  * ======================================================= */
 
 function drawSoftOrnament(
@@ -291,10 +363,13 @@ function drawSoftOrnament(
   const gradient =
     createGradient(
       ctx,
+
       centerX - span,
       y,
+
       centerX + span,
       y,
+
       0.64
     );
 
@@ -315,12 +390,13 @@ function drawSoftOrnament(
   ctx.lineJoin =
     'round';
 
-  const s = scale;
+  const s =
+    scale;
 
 
-  /* -------------------------
-   * Hai bên ngoài
-   * ----------------------- */
+  /* =====================================================
+   * HAI BÊN NGOÀI
+   * =================================================== */
 
   for (
     const direction
@@ -328,9 +404,14 @@ function drawSoftOrnament(
   ) {
     const plusX =
       centerX +
-      direction * 140 * s;
+      direction *
+      140 *
+      s;
 
-    /* dấu + */
+
+    /* -------------------------
+     * Dấu cộng
+     * ----------------------- */
 
     ctx.beginPath();
 
@@ -357,13 +438,17 @@ function drawSoftOrnament(
     ctx.stroke();
 
 
-    /* chấm */
+    /* -------------------------
+     * Chấm
+     * ----------------------- */
 
     ctx.beginPath();
 
     ctx.arc(
       centerX +
-        direction * 120 * s,
+        direction *
+        120 *
+        s,
 
       y - 5 * s,
 
@@ -376,13 +461,17 @@ function drawSoftOrnament(
     ctx.fill();
 
 
-    /* diamond */
+    /* -------------------------
+     * Diamond
+     * ----------------------- */
 
     drawTinyDiamond(
       ctx,
 
       centerX +
-        direction * 103 * s,
+        direction *
+        103 *
+        s,
 
       y + s,
 
@@ -393,9 +482,9 @@ function drawSoftOrnament(
   }
 
 
-  /* -------------------------
-   * Đường cong trái
-   * ----------------------- */
+  /* =====================================================
+   * ĐƯỜNG CONG TRÁI
+   * =================================================== */
 
   ctx.beginPath();
 
@@ -429,9 +518,9 @@ function drawSoftOrnament(
   ctx.stroke();
 
 
-  /* -------------------------
-   * Đường cong phải
-   * ----------------------- */
+  /* =====================================================
+   * ĐƯỜNG CONG PHẢI
+   * =================================================== */
 
   ctx.beginPath();
 
@@ -465,9 +554,9 @@ function drawSoftOrnament(
   ctx.stroke();
 
 
-  /* -------------------------
-   * Hai nét ôm tim
-   * ----------------------- */
+  /* =====================================================
+   * HAI NÉT ÔM TIM
+   * =================================================== */
 
   ctx.beginPath();
 
@@ -500,17 +589,22 @@ function drawSoftOrnament(
   ctx.stroke();
 
 
-  /* -------------------------
-   * Tim giữa
-   * ----------------------- */
+  /* =====================================================
+   * TIM GIỮA
+   * =================================================== */
 
   drawHeart(
     ctx,
+
     centerX,
     y + s,
+
     10.5 * s,
+
     gradient,
+
     false,
+
     4 * s
   );
 
@@ -521,11 +615,11 @@ function drawSoftOrnament(
 /* =========================================================
  * HEARTBEAT ORNAMENT
  *
- * Canvas version:
+ * Mô phỏng:
  *
  * ﮩ٨ـﮩﮩ٨ـ♡ﮩ٨ـﮩﮩ٨ـ
  *
- * Nằm gần tên phòng nhất.
+ * Không dùng font Unicode.
  * ======================================================= */
 
 function drawHeartbeatOrnament(
@@ -536,10 +630,13 @@ function drawHeartbeatOrnament(
   const gradient =
     createGradient(
       ctx,
+
       centerX - 125,
       y,
+
       centerX + 125,
       y,
+
       0.58
     );
 
@@ -548,7 +645,8 @@ function drawHeartbeatOrnament(
   ctx.strokeStyle =
     gradient;
 
-  ctx.lineWidth = 2.1;
+  ctx.lineWidth =
+    2.1;
 
   ctx.lineCap =
     'round';
@@ -563,9 +661,9 @@ function drawHeartbeatOrnament(
     centerX + 122;
 
 
-  /* -------------------------
-   * Nhịp trái
-   * ----------------------- */
+  /* =====================================================
+   * NHỊP TRÁI
+   * =================================================== */
 
   ctx.beginPath();
 
@@ -613,9 +711,9 @@ function drawHeartbeatOrnament(
   ctx.stroke();
 
 
-  /* -------------------------
-   * Nhịp phải
-   * ----------------------- */
+  /* =====================================================
+   * NHỊP PHẢI
+   * =================================================== */
 
   ctx.beginPath();
 
@@ -658,9 +756,9 @@ function drawHeartbeatOrnament(
   ctx.stroke();
 
 
-  /* -------------------------
-   * Tim rỗng giữa
-   * ----------------------- */
+  /* =====================================================
+   * TIM RỖNG GIỮA
+   * =================================================== */
 
   ctx.translate(
     centerX,
@@ -670,7 +768,8 @@ function drawHeartbeatOrnament(
   ctx.strokeStyle =
     gradient;
 
-  ctx.lineWidth = 2;
+  ctx.lineWidth =
+    2;
 
   ctx.beginPath();
 
@@ -708,12 +807,14 @@ function drawHeartbeatOrnament(
 
 
 /* =========================================================
+ * LOVE MARK
+ *
  * ・❥・
  *
- * Hai bên QUAY VÀO NHAU.
+ * Hai bên QUAY VÀO NHAU:
  *
- * Trái  → tên phòng
- * Phải  ← tên phòng
+ * trái  →
+ * phải  ←
  * ======================================================= */
 
 function drawInwardLoveMark(
@@ -737,9 +838,9 @@ function drawInwardLoveMark(
       : -1;
 
 
-  /* -------------------------
-   * Chấm ngoài
-   * ----------------------- */
+  /* =====================================================
+   * CHẤM NGOÀI
+   * =================================================== */
 
   ctx.beginPath();
 
@@ -754,9 +855,9 @@ function drawInwardLoveMark(
   ctx.fill();
 
 
-  /* -------------------------
-   * Chấm trong
-   * ----------------------- */
+  /* =====================================================
+   * CHẤM TRONG
+   * =================================================== */
 
   ctx.beginPath();
 
@@ -771,15 +872,18 @@ function drawInwardLoveMark(
   ctx.fill();
 
 
-  /* -------------------------
-   * Tim
-   * ----------------------- */
+  /* =====================================================
+   * TIM
+   * =================================================== */
 
   drawHeart(
     ctx,
+
     x,
     y - 1,
+
     7.2,
+
     fillStyle,
 
     side === 'right',
@@ -788,11 +892,12 @@ function drawInwardLoveMark(
   );
 
 
-  /* -------------------------
-   * Đuôi cong hướng vào chữ
-   * ----------------------- */
+  /* =====================================================
+   * ĐUÔI CONG HƯỚNG VÀO CHỮ
+   * =================================================== */
 
-  ctx.lineWidth = 2;
+  ctx.lineWidth =
+    2;
 
   ctx.lineCap =
     'round';
@@ -821,9 +926,9 @@ function drawInwardLoveMark(
 /* =========================================================
  * TITLE / SERVER NAME
  *
- * ・❥・  TÊN  ・❥・
+ * ・❥・ TÊN ・❥・
  *
- * Hai bên quay vào nhau.
+ * Hai tim quay vào nhau.
  * ======================================================= */
 
 function drawTitleWithLoveMarks(
@@ -838,22 +943,33 @@ function drawTitleWithLoveMarks(
   } = {}
 ) {
   const safe =
-    cleanCanvasText(text);
+    cleanCanvasText(
+      text
+    );
 
   const maxTextWidth =
     width - 260;
 
   fitFont(
     ctx,
+
     safe,
+
     maxTextWidth,
+
     startSize,
+
     minSize,
-    footer ? 600 : 700
+
+    footer
+      ? 600
+      : 700
   );
 
   const textWidth =
-    ctx.measureText(safe).width;
+    ctx.measureText(
+      safe
+    ).width;
 
   const textX =
     (width - textWidth) / 2;
@@ -861,17 +977,20 @@ function drawTitleWithLoveMarks(
   const gradient =
     createGradient(
       ctx,
+
       textX,
       y,
+
       textX + textWidth,
       y,
+
       1
     );
 
 
-  /* -------------------------
-   * Text
-   * ----------------------- */
+  /* =====================================================
+   * TEXT
+   * =================================================== */
 
   ctx.save();
 
@@ -888,7 +1007,9 @@ function drawTitleWithLoveMarks(
     'rgba(92, 91, 255, 0.22)';
 
   ctx.shadowBlur =
-    footer ? 3 : 5;
+    footer
+      ? 3
+      : 5;
 
   ctx.fillText(
     safe,
@@ -899,42 +1020,54 @@ function drawTitleWithLoveMarks(
   ctx.restore();
 
 
-  /* -------------------------
-   * ・❥・ hai bên
-   * ----------------------- */
+  /* =====================================================
+   * ・❥・ HAI BÊN
+   * =================================================== */
 
-  const gap = 43;
+  const gap =
+    43;
 
   drawInwardLoveMark(
     ctx,
+
     textX - gap,
+
     y,
+
     'left',
+
     gradient
   );
 
   drawInwardLoveMark(
     ctx,
+
     textX +
       textWidth +
       gap,
+
     y,
+
     'right',
+
     gradient
   );
 
 
-  /* -------------------------
-   * Line trang trí ra mép
-   * ----------------------- */
+  /* =====================================================
+   * LINE RA MÉP
+   * =================================================== */
 
   const lineGradient =
     createGradient(
       ctx,
+
       44,
       y,
+
       width - 44,
       y,
+
       0.42
     );
 
@@ -943,7 +1076,8 @@ function drawTitleWithLoveMarks(
   ctx.strokeStyle =
     lineGradient;
 
-  ctx.lineWidth = 1.6;
+  ctx.lineWidth =
+    1.6;
 
   ctx.lineCap =
     'round';
@@ -966,10 +1100,12 @@ function drawTitleWithLoveMarks(
   ctx.moveTo(
     Math.min(
       width - 48,
+
       textX +
         textWidth +
         78
     ),
+
     y
   );
 
@@ -1012,10 +1148,13 @@ function drawIcon(
   const gradient =
     createGradient(
       ctx,
+
       x,
       y,
+
       x + size,
       y + size,
+
       0.95
     );
 
@@ -1026,303 +1165,305 @@ function drawIcon(
     gradient;
 
 
-  switch (type) {
-    /* =====================================================
-     * CROWN
-     * =================================================== */
-
-    case 'crown': {
-      ctx.beginPath();
-
-      ctx.moveTo(
-        x,
-        y + size * 0.72
-      );
-
-      ctx.lineTo(
-        x + size * 0.12,
-        y + size * 0.25
-      );
-
-      ctx.lineTo(
-        x + size * 0.34,
-        y + size * 0.50
-      );
-
-      ctx.lineTo(
-        x + size * 0.50,
-        y + size * 0.14
-      );
+  /* =====================================================
+   * CROWN
+   * =================================================== */
 
-      ctx.lineTo(
-        x + size * 0.66,
-        y + size * 0.50
-      );
+  if (type === 'crown') {
+    ctx.beginPath();
 
-      ctx.lineTo(
-        x + size * 0.88,
-        y + size * 0.25
-      );
+    ctx.moveTo(
+      x,
+      y + size * 0.72
+    );
 
-      ctx.lineTo(
-        x + size,
-        y + size * 0.72
-      );
+    ctx.lineTo(
+      x + size * 0.12,
+      y + size * 0.25
+    );
 
-      ctx.closePath();
+    ctx.lineTo(
+      x + size * 0.34,
+      y + size * 0.50
+    );
 
-      ctx.fill();
+    ctx.lineTo(
+      x + size * 0.50,
+      y + size * 0.14
+    );
 
-      ctx.fillRect(
-        x + size * 0.08,
-        y + size * 0.74,
-        size * 0.84,
-        size * 0.14
-      );
+    ctx.lineTo(
+      x + size * 0.66,
+      y + size * 0.50
+    );
 
-      break;
-    }
+    ctx.lineTo(
+      x + size * 0.88,
+      y + size * 0.25
+    );
 
+    ctx.lineTo(
+      x + size,
+      y + size * 0.72
+    );
 
-    /* =====================================================
-     * MEMBERS
-     * =================================================== */
+    ctx.closePath();
 
-    case 'members': {
-      ctx.beginPath();
+    ctx.fill();
 
-      ctx.arc(
-        x + size * 0.34,
-        y + size * 0.31,
-        size * 0.20,
-        0,
-        Math.PI * 2
-      );
+    ctx.fillRect(
+      x + size * 0.08,
+      y + size * 0.74,
+      size * 0.84,
+      size * 0.14
+    );
+  }
 
-      ctx.fill();
 
-      ctx.beginPath();
+  /* =====================================================
+   * MEMBERS
+   * =================================================== */
 
-      ctx.arc(
-        x + size * 0.70,
-        y + size * 0.38,
-        size * 0.16,
-        0,
-        Math.PI * 2
-      );
+  else if (
+    type === 'members'
+  ) {
+    ctx.beginPath();
 
-      ctx.fill();
+    ctx.arc(
+      x + size * 0.34,
+      y + size * 0.31,
+      size * 0.20,
+      0,
+      Math.PI * 2
+    );
 
-      ctx.beginPath();
+    ctx.fill();
 
-      ctx.arc(
-        x + size * 0.34,
-        y + size * 0.94,
-        size * 0.36,
-        Math.PI,
-        Math.PI * 2
-      );
 
-      ctx.fill();
+    ctx.beginPath();
 
-      ctx.beginPath();
+    ctx.arc(
+      x + size * 0.70,
+      y + size * 0.38,
+      size * 0.16,
+      0,
+      Math.PI * 2
+    );
 
-      ctx.arc(
-        x + size * 0.72,
-        y + size * 0.94,
-        size * 0.28,
-        Math.PI,
-        Math.PI * 2
-      );
+    ctx.fill();
 
-      ctx.fill();
 
-      break;
-    }
+    ctx.beginPath();
 
+    ctx.arc(
+      x + size * 0.34,
+      y + size * 0.94,
+      size * 0.36,
+      Math.PI,
+      Math.PI * 2
+    );
 
-    /* =====================================================
-     * TRUSTED
-     * =================================================== */
+    ctx.fill();
 
-    case 'trusted': {
-      drawHeart(
-        ctx,
 
-        x + size * 0.50,
-        y + size * 0.48,
+    ctx.beginPath();
 
-        size * 0.25,
+    ctx.arc(
+      x + size * 0.72,
+      y + size * 0.94,
+      size * 0.28,
+      Math.PI,
+      Math.PI * 2
+    );
 
-        gradient,
+    ctx.fill();
+  }
 
-        false,
 
-        3
-      );
+  /* =====================================================
+   * TRUSTED
+   * =================================================== */
 
-      break;
-    }
+  else if (
+    type === 'trusted'
+  ) {
+    drawHeart(
+      ctx,
 
+      x + size * 0.50,
+      y + size * 0.48,
 
-    /* =====================================================
-     * LOCK
-     * =================================================== */
+      size * 0.25,
 
-    case 'lock': {
-      ctx.beginPath();
+      gradient,
 
-      ctx.arc(
-        x + size * 0.50,
-        y + size * 0.38,
-        size * 0.25,
-        Math.PI,
-        Math.PI * 2
-      );
+      false,
 
-      ctx.stroke();
+      3
+    );
+  }
 
-      ctx.fillRect(
-        x + size * 0.20,
-        y + size * 0.42,
-        size * 0.60,
-        size * 0.46
-      );
 
-      break;
-    }
+  /* =====================================================
+   * LOCK
+   * =================================================== */
 
+  else if (
+    type === 'lock'
+  ) {
+    ctx.beginPath();
 
-    /* =====================================================
-     * EYE
-     * =================================================== */
+    ctx.arc(
+      x + size * 0.50,
+      y + size * 0.38,
+      size * 0.25,
+      Math.PI,
+      Math.PI * 2
+    );
 
-    case 'eye': {
-      ctx.beginPath();
+    ctx.stroke();
 
-      ctx.moveTo(
-        x,
-        y + size * 0.50
-      );
 
-      ctx.bezierCurveTo(
-        x + size * 0.22,
-        y + size * 0.15,
+    ctx.fillRect(
+      x + size * 0.20,
+      y + size * 0.42,
+      size * 0.60,
+      size * 0.46
+    );
+  }
 
-        x + size * 0.78,
-        y + size * 0.15,
 
-        x + size,
-        y + size * 0.50
-      );
+  /* =====================================================
+   * EYE
+   * =================================================== */
 
-      ctx.bezierCurveTo(
-        x + size * 0.78,
-        y + size * 0.85,
+  else if (
+    type === 'eye'
+  ) {
+    ctx.beginPath();
 
-        x + size * 0.22,
-        y + size * 0.85,
+    ctx.moveTo(
+      x,
+      y + size * 0.50
+    );
 
-        x,
-        y + size * 0.50
-      );
+    ctx.bezierCurveTo(
+      x + size * 0.22,
+      y + size * 0.15,
 
-      ctx.stroke();
+      x + size * 0.78,
+      y + size * 0.15,
 
-      ctx.beginPath();
+      x + size,
+      y + size * 0.50
+    );
 
-      ctx.arc(
-        x + size * 0.50,
-        y + size * 0.50,
-        size * 0.14,
-        0,
-        Math.PI * 2
-      );
+    ctx.bezierCurveTo(
+      x + size * 0.78,
+      y + size * 0.85,
 
-      ctx.fill();
+      x + size * 0.22,
+      y + size * 0.85,
 
-      break;
-    }
+      x,
+      y + size * 0.50
+    );
 
+    ctx.stroke();
 
-    /* =====================================================
-     * GLOBE
-     * =================================================== */
 
-    case 'globe': {
-      ctx.beginPath();
+    ctx.beginPath();
 
-      ctx.arc(
-        x + size * 0.50,
-        y + size * 0.50,
-        size * 0.43,
-        0,
-        Math.PI * 2
-      );
+    ctx.arc(
+      x + size * 0.50,
+      y + size * 0.50,
+      size * 0.14,
+      0,
+      Math.PI * 2
+    );
 
-      ctx.stroke();
+    ctx.fill();
+  }
 
-      ctx.beginPath();
 
-      ctx.ellipse(
-        x + size * 0.50,
-        y + size * 0.50,
-        size * 0.20,
-        size * 0.43,
-        0,
-        0,
-        Math.PI * 2
-      );
+  /* =====================================================
+   * GLOBE
+   * =================================================== */
 
-      ctx.stroke();
+  else if (
+    type === 'globe'
+  ) {
+    ctx.beginPath();
 
-      ctx.beginPath();
+    ctx.arc(
+      x + size * 0.50,
+      y + size * 0.50,
+      size * 0.43,
+      0,
+      Math.PI * 2
+    );
 
-      ctx.moveTo(
-        x + size * 0.10,
-        y + size * 0.50
-      );
+    ctx.stroke();
 
-      ctx.lineTo(
-        x + size * 0.90,
-        y + size * 0.50
-      );
 
-      ctx.stroke();
+    ctx.beginPath();
 
-      ctx.beginPath();
+    ctx.ellipse(
+      x + size * 0.50,
+      y + size * 0.50,
+      size * 0.20,
+      size * 0.43,
+      0,
+      0,
+      Math.PI * 2
+    );
 
-      ctx.moveTo(
-        x + size * 0.18,
-        y + size * 0.30
-      );
+    ctx.stroke();
 
-      ctx.lineTo(
-        x + size * 0.82,
-        y + size * 0.30
-      );
 
-      ctx.stroke();
+    ctx.beginPath();
 
-      ctx.beginPath();
+    ctx.moveTo(
+      x + size * 0.10,
+      y + size * 0.50
+    );
 
-      ctx.moveTo(
-        x + size * 0.18,
-        y + size * 0.70
-      );
+    ctx.lineTo(
+      x + size * 0.90,
+      y + size * 0.50
+    );
 
-      ctx.lineTo(
-        x + size * 0.82,
-        y + size * 0.70
-      );
+    ctx.stroke();
 
-      ctx.stroke();
 
-      break;
-    }
+    ctx.beginPath();
 
-    default:
-      break;
+    ctx.moveTo(
+      x + size * 0.18,
+      y + size * 0.30
+    );
+
+    ctx.lineTo(
+      x + size * 0.82,
+      y + size * 0.30
+    );
+
+    ctx.stroke();
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      x + size * 0.18,
+      y + size * 0.70
+    );
+
+    ctx.lineTo(
+      x + size * 0.82,
+      y + size * 0.70
+    );
+
+    ctx.stroke();
   }
 
   ctx.restore();
@@ -1341,6 +1482,7 @@ function drawInfoRow(
     value,
     valueColor,
     y,
+
     iconX = 86,
     labelX = 136,
     valueX = 395
@@ -1348,9 +1490,13 @@ function drawInfoRow(
 ) {
   drawIcon(
     ctx,
+
     icon,
+
     iconX,
+
     y - 17,
+
     34
   );
 
@@ -1378,10 +1524,15 @@ function drawInfoRow(
 
   fitFont(
     ctx,
+
     String(value),
+
     300,
+
     30,
+
     20,
+
     600
   );
 
@@ -1399,6 +1550,7 @@ function drawInfoRow(
 
 async function renderRoomCard({
   owner,
+
   ownerName,
 
   memberCount,
@@ -1408,6 +1560,7 @@ async function renderRoomCard({
   limit,
 
   locked,
+
   hidden,
 
   region,
@@ -1516,7 +1669,7 @@ async function renderRoomCard({
 
 
   /* =====================================================
-   * AVATAR
+   * AVATAR URL
    * =================================================== */
 
   const avatarUrl =
@@ -1542,40 +1695,69 @@ async function renderRoomCard({
       hidden,
       safeRegion,
       safeRoomName,
-      safeSignature
+      safeSignature,
+
+      scale:
+        SCALE
     });
 
 
-  if (cache.has(cacheKey)) {
-    return cache.get(cacheKey);
+  if (
+    cache.has(cacheKey)
+  ) {
+    return cache.get(
+      cacheKey
+    );
   }
 
 
   /* =====================================================
-   * CANVAS SIZE
+   * OUTPUT CANVAS
    *
-   * Tăng chiều cao để đủ chỗ cho:
-   *
-   * ornament
-   * avatar
-   * ornament
-   * heartbeat
-   * title
-   * 6 info rows
-   * server name
+   * 912 x 984
    * =================================================== */
-
-  const width = 760;
-  const height = 820;
 
   const canvas =
     createCanvas(
-      width,
-      height
+      OUTPUT_WIDTH,
+      OUTPUT_HEIGHT
     );
 
+
   const ctx =
-    canvas.getContext('2d');
+    canvas.getContext(
+      '2d'
+    );
+
+
+  /*
+   * QUAN TRỌNG:
+   *
+   * Từ đây toàn bộ code tiếp tục sử dụng
+   * hệ tọa độ 760 x 820.
+   *
+   * Canvas tự phóng mọi thứ lên 120%.
+   */
+
+  ctx.scale(
+    SCALE,
+    SCALE
+  );
+
+
+  /*
+   * width / height phía dưới PHẢI là
+   * kích thước thiết kế gốc.
+   *
+   * Không dùng 912 x 984 ở các phép tính
+   * bố cục phía dưới.
+   */
+
+  const width =
+    DESIGN_WIDTH;
+
+  const height =
+    DESIGN_HEIGHT;
 
 
   /* =====================================================
@@ -1633,21 +1815,23 @@ async function renderRoomCard({
     );
 
 
-  /* -------------------------
-   * Glow
-   * ----------------------- */
+  /* =====================================================
+   * OUTER BORDER GLOW
+   * =================================================== */
 
   ctx.save();
 
   ctx.strokeStyle =
     outerBorder;
 
-  ctx.lineWidth = 3;
+  ctx.lineWidth =
+    3;
 
   ctx.shadowColor =
     'rgba(91, 91, 255, 0.28)';
 
-  ctx.shadowBlur = 6;
+  ctx.shadowBlur =
+    6;
 
   ctx.beginPath();
 
@@ -1664,18 +1848,20 @@ async function renderRoomCard({
   ctx.restore();
 
 
-  /* -------------------------
-   * Main
-   * ----------------------- */
+  /* =====================================================
+   * OUTER BORDER MAIN
+   * =================================================== */
 
   ctx.save();
 
   ctx.strokeStyle =
     outerBorder;
 
-  ctx.lineWidth = 2;
+  ctx.lineWidth =
+    2;
 
-  ctx.globalAlpha = 0.65;
+  ctx.globalAlpha =
+    0.65;
 
   ctx.beginPath();
 
@@ -1692,9 +1878,9 @@ async function renderRoomCard({
   ctx.restore();
 
 
-  /* -------------------------
-   * Inner
-   * ----------------------- */
+  /* =====================================================
+   * INNER BORDER
+   * =================================================== */
 
   const innerBorder =
     ctx.createLinearGradient(
@@ -1725,7 +1911,8 @@ async function renderRoomCard({
   ctx.strokeStyle =
     innerBorder;
 
-  ctx.lineWidth = 1;
+  ctx.lineWidth =
+    1;
 
   ctx.beginPath();
 
@@ -1743,7 +1930,7 @@ async function renderRoomCard({
 
 
   /* =====================================================
-   * ORNAMENT TRÊN AVATAR
+   * TRANG TRÍ TRÊN AVATAR
    *
    * ⊹₊˚‧︵‿₊୨ ♥ ୧₊‿︵‧˚₊⊹
    * =================================================== */
@@ -1780,9 +1967,11 @@ async function renderRoomCard({
   const cx =
     width / 2;
 
-  const cy = 145;
+  const cy =
+    145;
 
-  const radius = 76;
+  const radius =
+    76;
 
 
   /* =====================================================
@@ -1870,9 +2059,9 @@ async function renderRoomCard({
   );
 
 
-  /* -------------------------
-   * Ring glow
-   * ----------------------- */
+  /* =====================================================
+   * AVATAR RING GLOW
+   * =================================================== */
 
   ctx.save();
 
@@ -1889,21 +2078,23 @@ async function renderRoomCard({
   ctx.strokeStyle =
     ring;
 
-  ctx.lineWidth = 10;
+  ctx.lineWidth =
+    10;
 
   ctx.shadowColor =
     'rgba(89, 68, 255, 0.82)';
 
-  ctx.shadowBlur = 16;
+  ctx.shadowBlur =
+    16;
 
   ctx.stroke();
 
   ctx.restore();
 
 
-  /* -------------------------
-   * Main ring
-   * ----------------------- */
+  /* =====================================================
+   * AVATAR MAIN RING
+   * =================================================== */
 
   ctx.save();
 
@@ -1920,16 +2111,17 @@ async function renderRoomCard({
   ctx.strokeStyle =
     ring;
 
-  ctx.lineWidth = 7;
+  ctx.lineWidth =
+    7;
 
   ctx.stroke();
 
   ctx.restore();
 
 
-  /* -------------------------
-   * Dark inner edge
-   * ----------------------- */
+  /* =====================================================
+   * AVATAR DARK EDGE
+   * =================================================== */
 
   ctx.beginPath();
 
@@ -1944,7 +2136,8 @@ async function renderRoomCard({
   ctx.strokeStyle =
     '#0D1220';
 
-  ctx.lineWidth = 5;
+  ctx.lineWidth =
+    5;
 
   ctx.stroke();
 
@@ -1969,8 +2162,10 @@ async function renderRoomCard({
 
   ctx.drawImage(
     avatar,
+
     cx - radius,
     cy - radius,
+
     radius * 2,
     radius * 2
   );
@@ -1979,7 +2174,7 @@ async function renderRoomCard({
 
 
   /* =====================================================
-   * ORNAMENT DƯỚI AVATAR
+   * TRANG TRÍ DƯỚI AVATAR
    *
    * ⊹₊˚‧︵‿₊୨ ♥ ୧₊‿︵‧˚₊⊹
    * =================================================== */
@@ -1993,9 +2188,11 @@ async function renderRoomCard({
 
 
   /* =====================================================
-   * HEARTBEAT GẦN TÊN PHÒNG NHẤT
+   * HEARTBEAT
    *
    * ﮩ٨ـﮩﮩ٨ـ♡ﮩ٨ـﮩﮩ٨ـ
+   *
+   * Gần tên phòng nhất.
    * =================================================== */
 
   drawHeartbeatOrnament(
@@ -2010,28 +2207,36 @@ async function renderRoomCard({
    *
    * ・❥・ PHÒNG CỦA KHÁNH ・❥・
    *
-   * Hai tim quay vào nhau.
+   * Hai bên quay vào nhau.
    * =================================================== */
 
   drawTitleWithLoveMarks(
     ctx,
+
     326,
+
     safeRoomName,
+
     width,
+
     {
-      startSize: 34,
-      minSize: 21
+      startSize:
+        34,
+
+      minSize:
+        21
     }
   );
 
 
   /* =====================================================
-   * INFO
+   * INFO ROWS
    * =================================================== */
 
   const rows = [
     {
-      icon: 'crown',
+      icon:
+        'crown',
 
       label:
         'Chủ phòng',
@@ -2044,7 +2249,8 @@ async function renderRoomCard({
     },
 
     {
-      icon: 'members',
+      icon:
+        'members',
 
       label:
         'Thành viên',
@@ -2057,7 +2263,8 @@ async function renderRoomCard({
     },
 
     {
-      icon: 'trusted',
+      icon:
+        'trusted',
 
       label:
         'Tin cậy',
@@ -2072,7 +2279,8 @@ async function renderRoomCard({
     },
 
     {
-      icon: 'lock',
+      icon:
+        'lock',
 
       label:
         'Phòng',
@@ -2089,7 +2297,8 @@ async function renderRoomCard({
     },
 
     {
-      icon: 'eye',
+      icon:
+        'eye',
 
       label:
         'Hiển thị',
@@ -2106,7 +2315,8 @@ async function renderRoomCard({
     },
 
     {
-      icon: 'globe',
+      icon:
+        'globe',
 
       label:
         'Khu vực',
@@ -2121,9 +2331,14 @@ async function renderRoomCard({
   ];
 
 
-  let y = 390;
+  let y =
+    390;
 
-  for (const row of rows) {
+
+  for (
+    const row
+    of rows
+  ) {
     drawInfoRow(
       ctx,
       {
@@ -2132,7 +2347,8 @@ async function renderRoomCard({
       }
     );
 
-    y += 56;
+    y +=
+      56;
   }
 
 
@@ -2141,24 +2357,39 @@ async function renderRoomCard({
    *
    * ・❥・ Khủng Long Con ・❥・
    *
-   * Hai tim quay vào nhau.
+   * Hai bên quay vào nhau.
    * =================================================== */
 
   drawTitleWithLoveMarks(
     ctx,
+
     755,
+
     safeSignature,
+
     width,
+
     {
-      startSize: 31,
-      minSize: 20,
-      footer: true
+      startSize:
+        31,
+
+      minSize:
+        20,
+
+      footer:
+        true
     }
   );
 
 
   /* =====================================================
    * OUTPUT
+   *
+   * Canvas thực tế:
+   *
+   * 912 x 984
+   *
+   * Tức lớn hơn bản 760 x 820 đúng 20%.
    * =================================================== */
 
   const buffer =
@@ -2167,7 +2398,9 @@ async function renderRoomCard({
     );
 
 
-  if (cache.size >= 32) {
+  if (
+    cache.size >= 32
+  ) {
     cache.clear();
   }
 
