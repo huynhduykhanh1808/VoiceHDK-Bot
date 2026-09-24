@@ -4630,7 +4630,22 @@ async function buildRoomPanelPayload(
   return { ...dashboard, components: buildRoomButtons(channel) };
 }
 
-async function buildRoomAuxPayload(channel, room, requestedPage = 0) {
+async function buildRoomAuxPayload(channel, room) {
+  const regionRow = await buildRegionSelectRow(channel);
+  const memberRow = buildMemberSelectRow();
+  const container = new ContainerBuilder()
+    .setAccentColor(0x8899E8)
+    .addActionRowComponents(regionRow)
+    .addActionRowComponents(memberRow);
+
+  return {
+    components: [container],
+    flags: MessageFlags.IsComponentsV2,
+    allowedMentions: { parse: [] }
+  };
+}
+
+async function buildRoomTrustedPayloads(channel) {
   const trusted = await getTrustedMembers(channel.id);
   const members = [];
   for (const row of trusted) {
@@ -4638,68 +4653,56 @@ async function buildRoomAuxPayload(channel, room, requestedPage = 0) {
     if (member) members.push(member);
   }
 
-  const pageSize = 3;
+  const pageSize = 5;
+  const pages = [];
   const pageCount = Math.max(1, Math.ceil(members.length / pageSize));
-  const page = Math.min(Math.max(Number(requestedPage) || 0, 0), pageCount - 1);
-  const shown = members.slice(page * pageSize, page * pageSize + pageSize);
-  const regionRow = await buildRegionSelectRow(channel);
-  const memberRow = buildMemberSelectRow();
-  const container = new ContainerBuilder()
-    .setAccentColor(0x8899E8)
-    .addActionRowComponents(regionRow)
-    .addActionRowComponents(memberRow)
-    .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        `### ❤️ Người Tin cậy — ${members.length}${pageCount > 1 ? `  •  Trang ${page + 1}/${pageCount}` : ''}`
-      )
-    );
 
-  if (!shown.length) {
-    container.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent('.....')
-    );
-  } else {
-    shown.forEach((member, index) => {
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`room_trusted_name:${member.id}`)
-          .setLabel(safeMemberName(member).slice(0, 80) || member.id)
-          .setEmoji('❤️')
-          .setStyle(ButtonStyle.Success)
-          .setDisabled(true),
-        new ButtonBuilder()
-          .setCustomId(`room_untrust_member:${member.id}`)
-          .setLabel('XÓA')
-          .setEmoji('❌')
-          .setStyle(ButtonStyle.Danger)
+  for (let page = 0; page < pageCount; page += 1) {
+    const shown = members.slice(page * pageSize, page * pageSize + pageSize);
+    const title = page === 0
+      ? '### ・❥・ ❤️ NGƯỜI TIN CẬY ・❥・'
+      : `### ・❥・ ❤️ NGƯỜI TIN CẬY · ${page + 1} ・❥・`;
+    const subtitle = page === 0
+      ? `-# Những thành viên được chủ phòng tin cậy · ${members.length} người`
+      : `-# Tiếp nối danh sách · ${members.length} người`;
+    const container = new ContainerBuilder()
+      .setAccentColor(0x8899E8)
+      .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(`${title}\n${subtitle}`)
       );
 
-      if (index === shown.length - 1 && pageCount > 1) {
-        row.addComponents(
-          new ButtonBuilder()
-            .setCustomId(`room_trusted_page:${Math.max(0, page - 1)}`)
-            .setLabel('TRƯỚC')
-            .setEmoji('◀️')
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(page === 0),
-          new ButtonBuilder()
-            .setCustomId(`room_trusted_page:${Math.min(pageCount - 1, page + 1)}`)
-            .setLabel('SAU')
-            .setEmoji('▶️')
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(page === pageCount - 1)
+    if (!shown.length) {
+      container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent('-# Chưa có thành viên nào trong danh sách Tin cậy.')
+      );
+    } else {
+      for (const member of shown) {
+        container.addActionRowComponents(
+          new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId(`room_trusted_name:${member.id}`)
+              .setLabel(safeMemberName(member).slice(0, 80) || member.id)
+              .setEmoji('❤️')
+              .setStyle(ButtonStyle.Primary)
+              .setDisabled(true),
+            new ButtonBuilder()
+              .setCustomId(`room_untrust_member:${member.id}`)
+              .setLabel('XÓA')
+              .setEmoji('❌')
+              .setStyle(ButtonStyle.Danger)
+          )
         );
       }
+    }
 
-      container.addActionRowComponents(row);
+    pages.push({
+      components: [container],
+      flags: MessageFlags.IsComponentsV2,
+      allowedMentions: { parse: [] }
     });
   }
 
-  return {
-    components: [container],
-    flags: MessageFlags.IsComponentsV2,
-    allowedMentions: { parse: [] }
-  };
+  return pages;
 }
 
 function isRoomPanelMessage(
@@ -4772,6 +4775,61 @@ async function findRoomAuxMessages(channel) {
   } catch (error) {
     logError(`FIND_AUX_PANEL:${channel.id}`, error);
     return [];
+  }
+}
+
+function isRoomTrustedMessage(message) {
+  if (!message || message.author?.id !== client.user?.id) return false;
+  const ids = collectComponentCustomIds(message.components || []);
+  if (ids.some(id => id.startsWith('room_untrust_member:'))) return true;
+  try {
+    return JSON.stringify(message.components || []).includes('NGƯỜI TIN CẬY');
+  } catch {
+    return false;
+  }
+}
+
+async function findRoomTrustedMessages(channel) {
+  if (!channel?.messages) return [];
+  try {
+    const messages = await channel.messages.fetch({ limit: 100 });
+    return Array.from(messages.values())
+      .filter(isRoomTrustedMessage)
+      .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+  } catch (error) {
+    logError(`FIND_TRUSTED_PANEL:${channel.id}`, error);
+    return [];
+  }
+}
+
+async function syncRoomTrustedMessages(channel, { forceRebuild = false } = {}) {
+  const payloads = await buildRoomTrustedPayloads(channel);
+  let messages = await findRoomTrustedMessages(channel);
+
+  if (forceRebuild && messages.length) {
+    for (const message of messages) {
+      try { await message.delete(); } catch {}
+    }
+    messages = [];
+  }
+
+  for (let index = 0; index < payloads.length; index += 1) {
+    const payload = payloads[index];
+    const message = messages[index];
+    if (!message) {
+      await channel.send(payload);
+      continue;
+    }
+    try {
+      await message.edit(payload);
+    } catch {
+      try { await message.delete(); } catch {}
+      await channel.send(payload);
+    }
+  }
+
+  for (let index = payloads.length; index < messages.length; index += 1) {
+    try { await messages[index].delete(); } catch {}
   }
 }
 
@@ -4984,6 +5042,7 @@ async function refreshRoomPanelSafe(
       await setControlAuxMessage(channel.id, auxMessage.id);
       const allAux = await findRoomAuxMessages(channel);
       await deleteDuplicatePanels(allAux, auxMessage.id);
+      await syncRoomTrustedMessages(channel, { forceRebuild });
 
       const allPanels =
         await findRoomPanelMessages(
@@ -6820,12 +6879,6 @@ async function handleRoomUntrustMember(interaction, memberId) {
   await tempFollowUp(interaction, `❌ Đã hủy Tin cậy của ${name}.`);
 }
 
-async function handleTrustedPage(interaction, requestedPage) {
-  const context = await getOwnerRoomContext(interaction);
-  if (!context.ok) return tempReply(interaction, context.message, { error: true });
-  const payload = await buildRoomAuxPayload(context.channel, context.room, requestedPage);
-  await interaction.update(payload);
-}
 
 async function handleRoomFixPanel(interaction) {
   await safeDeferUpdate(interaction);
@@ -11896,11 +11949,6 @@ async function routeButtonInteraction(
 ) {
   if (interaction.customId.startsWith('room_untrust_member:')) {
     await handleRoomUntrustMember(interaction, interaction.customId.split(':')[1]);
-    return;
-  }
-
-  if (interaction.customId.startsWith('room_trusted_page:')) {
-    await handleTrustedPage(interaction, Number(interaction.customId.split(':')[1]));
     return;
   }
 
