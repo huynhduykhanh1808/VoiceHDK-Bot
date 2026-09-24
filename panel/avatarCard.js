@@ -33,10 +33,7 @@ function setupVietnameseFont(canvasLib) {
     if (regular) GlobalFonts.registerFromPath(regular, FONT_FAMILY);
     if (bold) GlobalFonts.registerFromPath(bold, FONT_FAMILY);
   } catch (error) {
-    console.warn(
-      '[VoiceHDK] Không đăng ký được font tiếng Việt:',
-      error?.message || error
-    );
+    console.warn('[VoiceHDK] Không đăng ký được font tiếng Việt:', error?.message || error);
   }
 
   fontReady = true;
@@ -93,6 +90,7 @@ function fitFont(
   }
 
   ctx.font = canvasFont(weight, size);
+
   return size;
 }
 
@@ -167,6 +165,7 @@ function drawHeart(
   glow = 0
 ) {
   ctx.save();
+
   ctx.translate(x, y);
 
   if (flip) {
@@ -217,6 +216,7 @@ function drawTinyDiamond(
   fillStyle
 ) {
   ctx.save();
+
   ctx.fillStyle = fillStyle;
 
   ctx.beginPath();
@@ -521,6 +521,7 @@ function drawHeartbeatOrnament(
   ctx.lineWidth = 2;
 
   ctx.beginPath();
+
   ctx.moveTo(0, 9);
 
   ctx.bezierCurveTo(
@@ -542,6 +543,7 @@ function drawHeartbeatOrnament(
   );
 
   ctx.stroke();
+
   ctx.restore();
 }
 
@@ -614,6 +616,7 @@ function drawInwardLoveMark(
   );
 
   ctx.stroke();
+
   ctx.restore();
 }
 
@@ -661,8 +664,12 @@ function drawTitleWithLoveMarks(
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = gradient;
-  ctx.shadowColor = 'rgba(92, 91, 255, 0.22)';
-  ctx.shadowBlur = footer ? 3 : 5;
+
+  ctx.shadowColor =
+    'rgba(92, 91, 255, 0.22)';
+
+  ctx.shadowBlur =
+    footer ? 3 : 5;
 
   ctx.fillText(
     safe,
