@@ -7,14 +7,19 @@ const perms = require('../services/voicePermissions');
 assert.deepStrictEqual(perms.normalVoiceAccess(), {
   ViewChannel: true, Connect: true, Speak: true, UseVAD: true, Stream: true
 });
-for (const id of ['room_lock','room_hide','room_rename','room_limit','room_reset','room_fix_panel','room_trust','room_untrust','room_invite','room_transfer','room_kick','room_deny']) {
+for (const id of ['room_lock','room_hide','room_limit','room_rename','room_reset','room_fix_panel','room_transfer','room_trust','room_invite','room_mute_toggle','room_kick','room_deny']) {
   assert(src.includes(`'${id}'`), `missing button ${id}`);
 }
+assert(src.indexOf("mk('room_mute_toggle'") < src.indexOf("mk('room_kick'"), 'mute must appear before kick');
 assert(src.indexOf("mk('room_kick'") < src.indexOf("mk('room_deny'"), 'kick must appear before ban');
+assert(!src.includes("mk('room_untrust'"), 'old untrust button must be removed');
+assert(src.includes("room_untrust_member:"), 'trusted remove button missing');
+assert(src.includes("room_trusted_page:"), 'trusted pagination missing');
+assert(src.includes("{ Speak: muted ? true : false }"), 'mute toggle must only edit Speak');
 assert(src.includes('control_aux_message_id'), 'second panel message persistence missing');
 assert(src.includes('new ContainerBuilder()'), 'Message 2 must use Components V2 ordering');
 assert(src.indexOf('.addActionRowComponents(regionRow)') < src.indexOf('.addActionRowComponents(memberRow)'), 'region select must appear before member select');
-assert(src.indexOf('.addActionRowComponents(memberRow)') < src.indexOf('.addTextDisplayComponents(trustedDisplay)'), 'trusted list must appear after selects');
+assert(src.indexOf('.addActionRowComponents(memberRow)') < src.indexOf('### ❤️ Người Tin cậy'), 'trusted list must appear after selects');
 assert(src.includes("new AttachmentBuilder(roomCard, { name: 'room-panel.png' })"), 'room card attachment missing');
 assert(src.includes(".setImage('attachment://room-panel.png')"), 'room card image missing');
 assert(src.includes('trustedCount,'), 'trusted count must be passed to room card');
