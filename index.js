@@ -22,7 +22,9 @@ const {
   SlashCommandBuilder,
   OverwriteType,
   MessageFlags,
-  AttachmentBuilder
+  AttachmentBuilder,
+  ContainerBuilder,
+  TextDisplayBuilder
 } = require('discord.js');
 
 const { Pool } = require('pg');
@@ -4447,14 +4449,18 @@ async function buildRoomDashboard(
     displayName
   ];
 
-  const embed =
+  const infoEmbed =
     new EmbedBuilder()
       .setColor(0x8899E8)
       .setDescription(body.join('\n'));
 
+  // Discord always renders a large embed image below that embed's text.
+  // Use a dedicated first embed for the owner card so Message 1 is ordered:
+  // avatar -> room information -> signature -> buttons.
+  const embeds = [];
   const payload = {
     content: '',
-    embeds: [embed],
+    embeds,
     allowedMentions: { parse: [] }
   };
 
@@ -4464,15 +4470,29 @@ async function buildRoomDashboard(
       if (avatarCard) {
         payload.attachments = [];
         payload.files = [new AttachmentBuilder(avatarCard, { name: 'owner-avatar.png' })];
-        embed.setImage('attachment://owner-avatar.png');
+        embeds.push(
+          new EmbedBuilder()
+            .setColor(0x8899E8)
+            .setImage('attachment://owner-avatar.png')
+        );
       } else {
-        embed.setThumbnail(owner.user.displayAvatarURL({ extension: 'png', size: 256 }));
+        embeds.push(
+          new EmbedBuilder()
+            .setColor(0x8899E8)
+            .setImage(owner.user.displayAvatarURL({ extension: 'png', size: 256 }))
+        );
       }
     } catch (error) {
       logError(`OWNER_AVATAR:${channel.id}`, error);
-      embed.setThumbnail(owner.user.displayAvatarURL({ extension: 'png', size: 256 }));
+      embeds.push(
+        new EmbedBuilder()
+          .setColor(0x8899E8)
+          .setImage(owner.user.displayAvatarURL({ extension: 'png', size: 256 }))
+      );
     }
   }
+
+  embeds.push(infoEmbed);
   return payload;
 }
 
@@ -4663,13 +4683,23 @@ async function buildRoomAuxPayload(channel, room) {
     }
     trustedText = `${shown.join('\n')}\n… và ${lines.length - shown.length} người khác`;
   }
-  const embed = new EmbedBuilder()
-    .setColor(0x8899E8)
-    .setTitle(`❤️ Người Tin cậy — ${lines.length}`)
-    .setDescription(trustedText);
+  // Components V2 lets text appear after interactive rows. With legacy
+  // messages Discord always renders embeds/text before all select menus, which
+  // is why the old panel showed the trusted list in the wrong place.
+  const regionRow = await buildRegionSelectRow(channel);
+  const memberRow = buildMemberSelectRow();
+  const trustedDisplay = new TextDisplayBuilder().setContent(
+    `### ❤️ Người Tin cậy — ${lines.length}\n${trustedText}`
+  );
+  const container = new ContainerBuilder()
+    .setAccentColor(0x8899E8)
+    .addActionRowComponents(regionRow)
+    .addActionRowComponents(memberRow)
+    .addTextDisplayComponents(trustedDisplay);
+
   return {
-    embeds: [embed],
-    components: [await buildRegionSelectRow(channel), buildMemberSelectRow()],
+    components: [container],
+    flags: MessageFlags.IsComponentsV2,
     allowedMentions: { parse: [] }
   };
 }
@@ -4722,12 +4752,17 @@ function isRoomPanelMessage(
   );
 }
 
+function collectComponentCustomIds(components, ids = []) {
+  for (const component of components || []) {
+    if (component?.customId) ids.push(component.customId);
+    if (Array.isArray(component?.components)) collectComponentCustomIds(component.components, ids);
+  }
+  return ids;
+}
+
 function isRoomAuxMessage(message) {
   if (!message || message.author?.id !== client.user?.id) return false;
-  const ids = [];
-  for (const row of message.components || []) {
-    for (const component of row.components || []) if (component.customId) ids.push(component.customId);
-  }
+  const ids = collectComponentCustomIds(message.components || []);
   return ids.includes('room_region') && ids.some(id => id === 'room_member' || id.startsWith('room_member:'));
 }
 
