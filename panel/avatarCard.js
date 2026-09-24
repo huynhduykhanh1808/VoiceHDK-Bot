@@ -32,6 +32,7 @@ const THEME = {
   backgroundEnd: '#181A2D'
 };
 
+
 /* =========================================================
  * FONT
  * ======================================================= */
@@ -45,22 +46,28 @@ function fitFont(
   weight = 700
 ) {
   const value = String(text ?? '');
+
   let size = startSize;
 
   while (size > minSize) {
     ctx.font = `${weight} ${size}px sans-serif`;
 
-    if (ctx.measureText(value).width <= maxWidth) {
+    if (
+      ctx.measureText(value).width <=
+      maxWidth
+    ) {
       break;
     }
 
     size--;
   }
 
-  ctx.font = `${weight} ${size}px sans-serif`;
+  ctx.font =
+    `${weight} ${size}px sans-serif`;
 
   return size;
 }
+
 
 /* =========================================================
  * CLEAN TEXT
@@ -70,25 +77,47 @@ function cleanCanvasText(text) {
   return String(text ?? '')
     .normalize('NFC')
 
-    .replace(/\p{Extended_Pictographic}/gu, '')
+    .replace(
+      /\p{Extended_Pictographic}/gu,
+      ''
+    )
 
-    .replace(/[\uFE0E\uFE0F]/gu, '')
+    .replace(
+      /[\uFE0E\uFE0F]/gu,
+      ''
+    )
 
-    .replace(/[\u200B-\u200D\u2060\uFEFF]/gu, '')
+    .replace(
+      /[\u200B-\u200D\u2060\uFEFF]/gu,
+      ''
+    )
 
-    .replace(/\uFFFD/gu, '')
+    .replace(
+      /\uFFFD/gu,
+      ''
+    )
 
-    .replace(/[□■▪▫▢▣▤▥▦▧▨▩]/gu, '')
+    .replace(
+      /[□■▪▫▢▣▤▥▦▧▨▩]/gu,
+      ''
+    )
 
-    .replace(/[\u0000-\u001F\u007F-\u009F]/gu, '')
+    .replace(
+      /[\u0000-\u001F\u007F-\u009F]/gu,
+      ''
+    )
 
-    .replace(/\s+/g, ' ')
+    .replace(
+      /\s+/g,
+      ' '
+    )
 
     .trim();
 }
 
+
 /* =========================================================
- * GRADIENT TEXT
+ * TEXT GRADIENT
  * ======================================================= */
 
 function createTextGradient(
@@ -127,6 +156,7 @@ function createTextGradient(
   return gradient;
 }
 
+
 /* =========================================================
  * ICONS
  * ======================================================= */
@@ -150,6 +180,10 @@ function drawIcon(
   ctx.lineJoin = 'round';
 
   switch (type) {
+    /* -----------------------------------------------------
+     * CROWN
+     * --------------------------------------------------- */
+
     case 'crown': {
       const gradient =
         ctx.createLinearGradient(
@@ -214,6 +248,7 @@ function drawIcon(
       );
 
       ctx.closePath();
+
       ctx.fill();
 
       ctx.fillRect(
@@ -225,6 +260,11 @@ function drawIcon(
 
       break;
     }
+
+
+    /* -----------------------------------------------------
+     * MEMBERS
+     * --------------------------------------------------- */
 
     case 'members': {
       const gradient =
@@ -298,6 +338,11 @@ function drawIcon(
       break;
     }
 
+
+    /* -----------------------------------------------------
+     * LOCK
+     * --------------------------------------------------- */
+
     case 'lock': {
       const gradient =
         ctx.createLinearGradient(
@@ -341,6 +386,11 @@ function drawIcon(
 
       break;
     }
+
+
+    /* -----------------------------------------------------
+     * EYE
+     * --------------------------------------------------- */
 
     case 'eye': {
       const gradient =
@@ -390,7 +440,8 @@ function drawIcon(
 
       ctx.stroke();
 
-      ctx.fillStyle = THEME.indigo;
+      ctx.fillStyle =
+        THEME.indigo;
 
       ctx.beginPath();
 
@@ -406,6 +457,11 @@ function drawIcon(
 
       break;
     }
+
+
+    /* -----------------------------------------------------
+     * GLOBE
+     * --------------------------------------------------- */
 
     case 'globe': {
       const gradient =
@@ -506,6 +562,7 @@ function drawIcon(
   ctx.restore();
 }
 
+
 /* =========================================================
  * FRAME CORNERS
  * ======================================================= */
@@ -545,6 +602,7 @@ function drawFrameCorner(
   );
 
   ctx.strokeStyle = gradient;
+
   ctx.lineWidth = 2.2;
   ctx.lineCap = 'round';
 
@@ -649,6 +707,388 @@ function drawFrameCorner(
   ctx.restore();
 }
 
+
+/* =========================================================
+ * SMALL DIAMOND
+ * ======================================================= */
+
+function drawTinyDiamond(
+  ctx,
+  x,
+  y,
+  size,
+  color
+) {
+  ctx.save();
+
+  ctx.fillStyle = color;
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    x,
+    y - size
+  );
+
+  ctx.lineTo(
+    x + size,
+    y
+  );
+
+  ctx.lineTo(
+    x,
+    y + size
+  );
+
+  ctx.lineTo(
+    x - size,
+    y
+  );
+
+  ctx.closePath();
+
+  ctx.fill();
+
+  ctx.restore();
+}
+
+
+/* =========================================================
+ * SMALL HEART
+ * ======================================================= */
+
+function drawSmallHeart(
+  ctx,
+  x,
+  y,
+  size,
+  color
+) {
+  ctx.save();
+
+  ctx.fillStyle = color;
+
+  ctx.shadowColor =
+    'rgba(112, 91, 255, 0.30)';
+
+  ctx.shadowBlur = 5;
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    x,
+    y + size * 0.75
+  );
+
+  ctx.bezierCurveTo(
+    x - size * 1.15,
+    y,
+    x - size * 0.72,
+    y - size * 0.85,
+    x,
+    y - size * 0.30
+  );
+
+  ctx.bezierCurveTo(
+    x + size * 0.72,
+    y - size * 0.85,
+    x + size * 1.15,
+    y,
+    x,
+    y + size * 0.75
+  );
+
+  ctx.fill();
+
+  ctx.restore();
+}
+
+
+/* =========================================================
+ * AVATAR DECORATION
+ *
+ * Phỏng theo:
+ *
+ * ⊹₊˚‧︵‿₊୨ᰔ୧₊‿︵‧˚₊⊹
+ *
+ * Không dùng Unicode để tránh lỗi font / ô vuông.
+ * ======================================================= */
+
+function drawAvatarDecoration(
+  ctx,
+  centerX,
+  y
+) {
+  const gradient =
+    ctx.createLinearGradient(
+      centerX - 145,
+      y,
+      centerX + 145,
+      y
+    );
+
+  gradient.addColorStop(
+    0,
+    'rgba(61, 141, 255, 0.58)'
+  );
+
+  gradient.addColorStop(
+    0.35,
+    'rgba(89, 101, 255, 0.68)'
+  );
+
+  gradient.addColorStop(
+    0.65,
+    'rgba(133, 88, 255, 0.68)'
+  );
+
+  gradient.addColorStop(
+    1,
+    'rgba(168, 61, 255, 0.58)'
+  );
+
+  ctx.save();
+
+  ctx.strokeStyle = gradient;
+  ctx.fillStyle = gradient;
+
+  ctx.lineWidth = 2;
+
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+
+  /* -----------------------------------------------------
+   * DẤU CỘNG TRÁI
+   * --------------------------------------------------- */
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    centerX - 142,
+    y
+  );
+
+  ctx.lineTo(
+    centerX - 132,
+    y
+  );
+
+  ctx.moveTo(
+    centerX - 137,
+    y - 5
+  );
+
+  ctx.lineTo(
+    centerX - 137,
+    y + 5
+  );
+
+  ctx.stroke();
+
+
+  /* -----------------------------------------------------
+   * CHẤM TRÁI
+   * --------------------------------------------------- */
+
+  ctx.beginPath();
+
+  ctx.arc(
+    centerX - 119,
+    y - 5,
+    2.2,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fill();
+
+
+  /* -----------------------------------------------------
+   * DIAMOND TRÁI
+   * --------------------------------------------------- */
+
+  drawTinyDiamond(
+    ctx,
+    centerX - 103,
+    y + 1,
+    4,
+    gradient
+  );
+
+
+  /* -----------------------------------------------------
+   * ĐƯỜNG CONG TRÁI
+   * --------------------------------------------------- */
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    centerX - 91,
+    y
+  );
+
+  ctx.bezierCurveTo(
+    centerX - 77,
+    y - 11,
+    centerX - 65,
+    y - 11,
+    centerX - 53,
+    y
+  );
+
+  ctx.bezierCurveTo(
+    centerX - 42,
+    y + 10,
+    centerX - 31,
+    y + 10,
+    centerX - 20,
+    y
+  );
+
+  ctx.stroke();
+
+
+  /* -----------------------------------------------------
+   * TIM GIỮA
+   * --------------------------------------------------- */
+
+  drawSmallHeart(
+    ctx,
+    centerX,
+    y + 1,
+    11,
+    gradient
+  );
+
+
+  /* -----------------------------------------------------
+   * HAI NÉT ÔM TIM
+   * --------------------------------------------------- */
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    centerX - 16,
+    y - 8
+  );
+
+  ctx.quadraticCurveTo(
+    centerX - 23,
+    y,
+    centerX - 16,
+    y + 8
+  );
+
+  ctx.moveTo(
+    centerX + 16,
+    y - 8
+  );
+
+  ctx.quadraticCurveTo(
+    centerX + 23,
+    y,
+    centerX + 16,
+    y + 8
+  );
+
+  ctx.stroke();
+
+
+  /* -----------------------------------------------------
+   * ĐƯỜNG CONG PHẢI
+   * --------------------------------------------------- */
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    centerX + 20,
+    y
+  );
+
+  ctx.bezierCurveTo(
+    centerX + 31,
+    y + 10,
+    centerX + 42,
+    y + 10,
+    centerX + 53,
+    y
+  );
+
+  ctx.bezierCurveTo(
+    centerX + 65,
+    y - 11,
+    centerX + 77,
+    y - 11,
+    centerX + 91,
+    y
+  );
+
+  ctx.stroke();
+
+
+  /* -----------------------------------------------------
+   * DIAMOND PHẢI
+   * --------------------------------------------------- */
+
+  drawTinyDiamond(
+    ctx,
+    centerX + 103,
+    y + 1,
+    4,
+    gradient
+  );
+
+
+  /* -----------------------------------------------------
+   * CHẤM PHẢI
+   * --------------------------------------------------- */
+
+  ctx.beginPath();
+
+  ctx.arc(
+    centerX + 119,
+    y - 5,
+    2.2,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fill();
+
+
+  /* -----------------------------------------------------
+   * DẤU CỘNG PHẢI
+   * --------------------------------------------------- */
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    centerX + 132,
+    y
+  );
+
+  ctx.lineTo(
+    centerX + 142,
+    y
+  );
+
+  ctx.moveTo(
+    centerX + 137,
+    y - 5
+  );
+
+  ctx.lineTo(
+    centerX + 137,
+    y + 5
+  );
+
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+
 /* =========================================================
  * DECORATED TITLE / SIGNATURE
  * ======================================================= */
@@ -668,8 +1108,7 @@ function drawCenteredDecoratedLine(
 
   const margin = 40;
 
-  const leftEdge =
-    margin;
+  const leftEdge = margin;
 
   const rightEdge =
     width - margin;
@@ -752,6 +1191,7 @@ function drawCenteredDecoratedLine(
     lineGradient;
 
   ctx.lineWidth = 2.2;
+
   ctx.lineCap = 'round';
 
   ctx.beginPath();
@@ -822,6 +1262,7 @@ function drawCenteredDecoratedLine(
   ctx.restore();
 }
 
+
 /* =========================================================
  * INFO ROW
  * ======================================================= */
@@ -848,6 +1289,7 @@ function drawInfoRow(
   );
 
   ctx.textBaseline = 'middle';
+
   ctx.textAlign = 'left';
 
   ctx.fillStyle =
@@ -881,6 +1323,7 @@ function drawInfoRow(
     y
   );
 }
+
 
 /* =========================================================
  * MAIN ROOM CARD
@@ -919,6 +1362,7 @@ async function renderRoomCard({
     createCanvas,
     loadImage
   } = canvasLib;
+
 
   /* =====================================================
    * TEXT DATA
@@ -976,6 +1420,7 @@ async function renderRoomCard({
       ? '∞'
       : String(limit);
 
+
   /* =====================================================
    * AVATAR URL
    * =================================================== */
@@ -986,6 +1431,7 @@ async function renderRoomCard({
       size: 256,
       forceStatic: true
     });
+
 
   /* =====================================================
    * CACHE
@@ -1008,11 +1454,13 @@ async function renderRoomCard({
     return cache.get(cacheKey);
   }
 
+
   /* =====================================================
    * CANVAS
    * =================================================== */
 
   const width = 760;
+
   const height = 700;
 
   const canvas =
@@ -1023,6 +1471,7 @@ async function renderRoomCard({
 
   const ctx =
     canvas.getContext('2d');
+
 
   /* =====================================================
    * BACKGROUND
@@ -1060,6 +1509,7 @@ async function renderRoomCard({
     height
   );
 
+
   /* =====================================================
    * OUTER BORDER GRADIENT
    * =================================================== */
@@ -1092,10 +1542,11 @@ async function renderRoomCard({
     THEME.violet
   );
 
+
   /* =====================================================
-   * VIỀN NGOÀI - GLOW
+   * OUTER BORDER GLOW
    *
-   * ĐÃ GIẢM ~50%
+   * GIẢM ~50%
    * =================================================== */
 
   ctx.save();
@@ -1103,14 +1554,11 @@ async function renderRoomCard({
   ctx.strokeStyle =
     outerBorder;
 
-  // Bản trước: 6
   ctx.lineWidth = 3;
 
-  // Bản trước: alpha 0.55
   ctx.shadowColor =
     'rgba(91, 91, 255, 0.28)';
 
-  // Bản trước: 11
   ctx.shadowBlur = 6;
 
   ctx.beginPath();
@@ -1127,10 +1575,11 @@ async function renderRoomCard({
 
   ctx.restore();
 
+
   /* =====================================================
-   * VIỀN NGOÀI CHÍNH
+   * OUTER BORDER MAIN
    *
-   * ĐÃ GIẢM ~50%
+   * GIẢM ~50%
    * =================================================== */
 
   ctx.save();
@@ -1138,10 +1587,8 @@ async function renderRoomCard({
   ctx.strokeStyle =
     outerBorder;
 
-  // Bản trước: 4
   ctx.lineWidth = 2;
 
-  // Làm dịu màu nhưng vẫn giữ gradient.
   ctx.globalAlpha = 0.65;
 
   ctx.beginPath();
@@ -1158,10 +1605,11 @@ async function renderRoomCard({
 
   ctx.restore();
 
+
   /* =====================================================
-   * VIỀN THỨ 2 PHÍA TRONG
+   * INNER BORDER
    *
-   * ĐÃ GIẢM ~50%
+   * GIẢM ~50%
    * =================================================== */
 
   const innerBorder =
@@ -1192,7 +1640,6 @@ async function renderRoomCard({
   ctx.strokeStyle =
     innerBorder;
 
-  // Bản trước: 1.5
   ctx.lineWidth = 1;
 
   ctx.beginPath();
@@ -1208,6 +1655,7 @@ async function renderRoomCard({
   ctx.stroke();
 
   ctx.restore();
+
 
   /* =====================================================
    * LOAD AVATAR
@@ -1236,10 +1684,9 @@ async function renderRoomCard({
 
   const radius = 76;
 
+
   /* =====================================================
    * AVATAR OUTER GLOW
-   *
-   * GIỮ NGUYÊN
    * =================================================== */
 
   const glow =
@@ -1286,10 +1733,9 @@ async function renderRoomCard({
 
   ctx.fill();
 
+
   /* =====================================================
    * AVATAR GRADIENT RING
-   *
-   * GIỮ NGUYÊN
    * =================================================== */
 
   const ring =
@@ -1320,9 +1766,10 @@ async function renderRoomCard({
     '#AA2FFF'
   );
 
-  /* -------------------------
-   * Glow vòng avatar
-   * ----------------------- */
+
+  /* -----------------------------------------------------
+   * AVATAR RING GLOW
+   * --------------------------------------------------- */
 
   ctx.save();
 
@@ -1349,9 +1796,10 @@ async function renderRoomCard({
 
   ctx.restore();
 
-  /* -------------------------
-   * Ring chính
-   * ----------------------- */
+
+  /* -----------------------------------------------------
+   * AVATAR MAIN RING
+   * --------------------------------------------------- */
 
   ctx.save();
 
@@ -1373,9 +1821,10 @@ async function renderRoomCard({
 
   ctx.restore();
 
-  /* -------------------------
-   * Viền tối sát avatar
-   * ----------------------- */
+
+  /* -----------------------------------------------------
+   * DARK EDGE
+   * --------------------------------------------------- */
 
   ctx.beginPath();
 
@@ -1393,6 +1842,7 @@ async function renderRoomCard({
   ctx.lineWidth = 5;
 
   ctx.stroke();
+
 
   /* =====================================================
    * DRAW AVATAR
@@ -1422,13 +1872,29 @@ async function renderRoomCard({
 
   ctx.restore();
 
+
   /* =====================================================
-   * TITLE
+   * AVATAR / ROOM NAME DECORATION
+   *
+   * ⊹₊˚‧︵‿₊୨ᰔ୧₊‿︵‧˚₊⊹
+   *
+   * Vẽ bằng Canvas để không lỗi font.
+   * =================================================== */
+
+  drawAvatarDecoration(
+    ctx,
+    width / 2,
+    225
+  );
+
+
+  /* =====================================================
+   * ROOM TITLE
    * =================================================== */
 
   drawCenteredDecoratedLine(
     ctx,
-    250,
+    270,
     safeRoomName,
     width,
     {
@@ -1438,6 +1904,7 @@ async function renderRoomCard({
     }
   );
 
+
   /* =====================================================
    * ROOM INFO
    * =================================================== */
@@ -1445,22 +1912,35 @@ async function renderRoomCard({
   const rows = [
     {
       icon: 'crown',
-      label: 'Chủ phòng',
-      value: `@${safeOwnerName}`,
-      valueColor: THEME.owner
+
+      label:
+        'Chủ phòng',
+
+      value:
+        `@${safeOwnerName}`,
+
+      valueColor:
+        THEME.owner
     },
 
     {
       icon: 'members',
-      label: 'Thành viên',
+
+      label:
+        'Thành viên',
+
       value:
         `${Number(memberCount) || 0} / ${safeLimit}`,
-      valueColor: THEME.members
+
+      valueColor:
+        THEME.members
     },
 
     {
       icon: 'lock',
-      label: 'Phòng',
+
+      label:
+        'Phòng',
 
       value:
         locked
@@ -1475,7 +1955,9 @@ async function renderRoomCard({
 
     {
       icon: 'eye',
-      label: 'Hiển thị',
+
+      label:
+        'Hiển thị',
 
       value:
         hidden
@@ -1490,7 +1972,9 @@ async function renderRoomCard({
 
     {
       icon: 'globe',
-      label: 'Khu vực',
+
+      label:
+        'Khu vực',
 
       value:
         safeRegion ||
@@ -1501,7 +1985,12 @@ async function renderRoomCard({
     }
   ];
 
-  let y = 320;
+  /*
+   * Title đã hạ xuống 270.
+   * Vì vậy info cũng hạ nhẹ để giữ khoảng thở.
+   */
+
+  let y = 334;
 
   for (const row of rows) {
     drawInfoRow(
@@ -1512,8 +2001,9 @@ async function renderRoomCard({
       }
     );
 
-    y += 61;
+    y += 58;
   }
+
 
   /* =====================================================
    * BOTTOM SIGNATURE
@@ -1530,6 +2020,7 @@ async function renderRoomCard({
       minSize: 20
     }
   );
+
 
   /* =====================================================
    * OUTPUT
@@ -1552,11 +2043,14 @@ async function renderRoomCard({
   return buffer;
 }
 
+
 /* =========================================================
  * COMPATIBILITY
  * ======================================================= */
 
-async function renderOwnerAvatarCard(owner) {
+async function renderOwnerAvatarCard(
+  owner
+) {
   if (!owner?.user) {
     return null;
   }
@@ -1594,6 +2088,7 @@ async function renderOwnerAvatarCard(owner) {
       'VoiceHDK Bot'
   });
 }
+
 
 /* =========================================================
  * EXPORT
