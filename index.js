@@ -4403,6 +4403,7 @@ async function buildRoomDashboard(
   const limit = channel.userLimit > 0 ? channel.userLimit : '∞';
   const region = channel.rtcRegion ? channel.rtcRegion : 'Tự động';
   const roomName = channel.name || `PHÒNG CỦA ${ownerName}`;
+  const trustedCount = (await getTrustedMembers(channel.id)).length;
 
   const payload = {
     content: '',
@@ -4416,6 +4417,7 @@ async function buildRoomDashboard(
         owner,
         ownerName,
         memberCount: humans.length,
+        trustedCount,
         limit,
         locked: state.locked,
         hidden: state.hidden,
@@ -4447,6 +4449,7 @@ async function buildRoomDashboard(
         '────────────────────────────',
         `👑 Chủ phòng    @${ownerName}`,
         `👥 Thành viên   ${humans.length} / ${limit}`,
+        `❤️ Tin cậy      ${trustedCount}`,
         `🔓 Phòng        ${state.locked ? 'Đang khóa' : 'Đang mở'}`,
         `👁 Hiển thị     ${state.hidden ? 'Đang ẩn' : 'Công khai'}`,
         `🌐 Khu vực      ${region}`,
