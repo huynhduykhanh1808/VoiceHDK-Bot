@@ -2,9 +2,10 @@
 
 const cache = new Map();
 
-/**
- * Tự giảm font nếu nội dung quá dài.
- */
+/* =========================================================
+ * FONT
+ * ======================================================= */
+
 function fitFont(
   ctx,
   text,
@@ -13,8 +14,8 @@ function fitFont(
   minSize = 18,
   weight = 700
 ) {
-  let size = startSize;
   const value = String(text ?? '');
+  let size = startSize;
 
   while (size > minSize) {
     ctx.font = `${weight} ${size}px sans-serif`;
@@ -23,7 +24,7 @@ function fitFont(
       break;
     }
 
-    size -= 1;
+    size--;
   }
 
   ctx.font = `${weight} ${size}px sans-serif`;
@@ -31,30 +32,42 @@ function fitFont(
   return size;
 }
 
-/**
- * Làm sạch chuỗi trước khi Canvas render.
- *
- * Emoji Unicode trong font Linux/Render có thể hiện thành □.
- * Icon của panel được vẽ bằng Canvas riêng nên không cần emoji
- * nằm trong chuỗi.
- */
+/* =========================================================
+ * CLEAN TEXT
+ * ======================================================= */
+
 function cleanCanvasText(text) {
   return String(text ?? '')
-    .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')
-    .replace(/[\u2600-\u27BF]/gu, '')
-    .replace(/\uFE0F/gu, '')
-    .replace(/\u200D/gu, '')
-    .replace(/[□■▪▫]/gu, '')
+    .normalize('NFC')
+
+    // Emoji / pictographic
+    .replace(/\p{Extended_Pictographic}/gu, '')
+
+    // Variation selectors
+    .replace(/[\uFE0E\uFE0F]/gu, '')
+
+    // Zero-width characters
+    .replace(/[\u200B-\u200D\u2060\uFEFF]/gu, '')
+
+    // Unicode replacement character
+    .replace(/\uFFFD/gu, '')
+
+    // Các ký tự ô vuông thường gặp
+    .replace(/[□■▪▫▢▣▤▥▦▧▨▩]/gu, '')
+
+    // Control characters
+    .replace(/[\u0000-\u001F\u007F-\u009F]/gu, '')
+
+    // Gộp khoảng trắng
     .replace(/\s+/g, ' ')
+
     .trim();
 }
 
-/**
- * Vẽ icon trực tiếp bằng Canvas.
- *
- * Không dùng emoji Unicode để tránh lỗi ô vuông □
- * trên Render/Linux.
- */
+/* =========================================================
+ * ICONS
+ * ======================================================= */
+
 function drawIcon(ctx, type, x, y, size = 34) {
   ctx.save();
 
@@ -63,78 +76,9 @@ function drawIcon(ctx, type, x, y, size = 34) {
   ctx.lineJoin = 'round';
 
   switch (type) {
-    /**
-     * LOA
-     */
-    case 'speaker': {
-      ctx.fillStyle = '#7fc8ff';
-      ctx.strokeStyle = '#7fc8ff';
-
-      ctx.beginPath();
-
-      ctx.moveTo(
-        x,
-        y + size * 0.38
-      );
-
-      ctx.lineTo(
-        x + size * 0.27,
-        y + size * 0.38
-      );
-
-      ctx.lineTo(
-        x + size * 0.58,
-        y + size * 0.12
-      );
-
-      ctx.lineTo(
-        x + size * 0.58,
-        y + size * 0.88
-      );
-
-      ctx.lineTo(
-        x + size * 0.27,
-        y + size * 0.62
-      );
-
-      ctx.lineTo(
-        x,
-        y + size * 0.62
-      );
-
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.beginPath();
-
-      ctx.arc(
-        x + size * 0.55,
-        y + size * 0.5,
-        size * 0.24,
-        -Math.PI / 3,
-        Math.PI / 3
-      );
-
-      ctx.stroke();
-
-      ctx.beginPath();
-
-      ctx.arc(
-        x + size * 0.55,
-        y + size * 0.5,
-        size * 0.4,
-        -Math.PI / 3,
-        Math.PI / 3
-      );
-
-      ctx.stroke();
-
-      break;
-    }
-
-    /**
-     * VƯƠNG MIỆN
-     */
+    /* -------------------------
+     * CROWN
+     * ----------------------- */
     case 'crown': {
       ctx.fillStyle = '#ffd766';
 
@@ -152,17 +96,17 @@ function drawIcon(ctx, type, x, y, size = 34) {
 
       ctx.lineTo(
         x + size * 0.34,
-        y + size * 0.5
+        y + size * 0.50
       );
 
       ctx.lineTo(
-        x + size * 0.5,
+        x + size * 0.50,
         y + size * 0.14
       );
 
       ctx.lineTo(
         x + size * 0.66,
-        y + size * 0.5
+        y + size * 0.50
       );
 
       ctx.lineTo(
@@ -188,9 +132,9 @@ function drawIcon(ctx, type, x, y, size = 34) {
       break;
     }
 
-    /**
-     * THÀNH VIÊN
-     */
+    /* -------------------------
+     * MEMBERS
+     * ----------------------- */
     case 'members': {
       ctx.fillStyle = '#9878ff';
 
@@ -199,7 +143,7 @@ function drawIcon(ctx, type, x, y, size = 34) {
       ctx.arc(
         x + size * 0.34,
         y + size * 0.31,
-        size * 0.2,
+        size * 0.20,
         0,
         Math.PI * 2
       );
@@ -209,7 +153,7 @@ function drawIcon(ctx, type, x, y, size = 34) {
       ctx.beginPath();
 
       ctx.arc(
-        x + size * 0.7,
+        x + size * 0.70,
         y + size * 0.38,
         size * 0.16,
         0,
@@ -245,9 +189,9 @@ function drawIcon(ctx, type, x, y, size = 34) {
       break;
     }
 
-    /**
-     * KHÓA
-     */
+    /* -------------------------
+     * LOCK
+     * ----------------------- */
     case 'lock': {
       ctx.strokeStyle = '#ffd166';
       ctx.fillStyle = '#ffd166';
@@ -255,7 +199,7 @@ function drawIcon(ctx, type, x, y, size = 34) {
       ctx.beginPath();
 
       ctx.arc(
-        x + size * 0.5,
+        x + size * 0.50,
         y + size * 0.38,
         size * 0.25,
         Math.PI,
@@ -265,18 +209,18 @@ function drawIcon(ctx, type, x, y, size = 34) {
       ctx.stroke();
 
       ctx.fillRect(
-        x + size * 0.2,
+        x + size * 0.20,
         y + size * 0.42,
-        size * 0.6,
+        size * 0.60,
         size * 0.46
       );
 
       break;
     }
 
-    /**
-     * MẮT
-     */
+    /* -------------------------
+     * EYE
+     * ----------------------- */
     case 'eye': {
       ctx.strokeStyle = '#dce2ff';
 
@@ -284,7 +228,7 @@ function drawIcon(ctx, type, x, y, size = 34) {
 
       ctx.moveTo(
         x,
-        y + size * 0.5
+        y + size * 0.50
       );
 
       ctx.bezierCurveTo(
@@ -293,7 +237,7 @@ function drawIcon(ctx, type, x, y, size = 34) {
         x + size * 0.78,
         y + size * 0.15,
         x + size,
-        y + size * 0.5
+        y + size * 0.50
       );
 
       ctx.bezierCurveTo(
@@ -302,7 +246,7 @@ function drawIcon(ctx, type, x, y, size = 34) {
         x + size * 0.22,
         y + size * 0.85,
         x,
-        y + size * 0.5
+        y + size * 0.50
       );
 
       ctx.stroke();
@@ -312,8 +256,8 @@ function drawIcon(ctx, type, x, y, size = 34) {
       ctx.beginPath();
 
       ctx.arc(
-        x + size * 0.5,
-        y + size * 0.5,
+        x + size * 0.50,
+        y + size * 0.50,
         size * 0.14,
         0,
         Math.PI * 2
@@ -324,17 +268,17 @@ function drawIcon(ctx, type, x, y, size = 34) {
       break;
     }
 
-    /**
-     * QUẢ ĐỊA CẦU
-     */
+    /* -------------------------
+     * GLOBE
+     * ----------------------- */
     case 'globe': {
       ctx.strokeStyle = '#5ed0ff';
 
       ctx.beginPath();
 
       ctx.arc(
-        x + size * 0.5,
-        y + size * 0.5,
+        x + size * 0.50,
+        y + size * 0.50,
         size * 0.43,
         0,
         Math.PI * 2
@@ -345,9 +289,9 @@ function drawIcon(ctx, type, x, y, size = 34) {
       ctx.beginPath();
 
       ctx.ellipse(
-        x + size * 0.5,
-        y + size * 0.5,
-        size * 0.2,
+        x + size * 0.50,
+        y + size * 0.50,
+        size * 0.20,
         size * 0.43,
         0,
         0,
@@ -359,13 +303,13 @@ function drawIcon(ctx, type, x, y, size = 34) {
       ctx.beginPath();
 
       ctx.moveTo(
-        x + size * 0.1,
-        y + size * 0.5
+        x + size * 0.10,
+        y + size * 0.50
       );
 
       ctx.lineTo(
-        x + size * 0.9,
-        y + size * 0.5
+        x + size * 0.90,
+        y + size * 0.50
       );
 
       ctx.stroke();
@@ -374,12 +318,12 @@ function drawIcon(ctx, type, x, y, size = 34) {
 
       ctx.moveTo(
         x + size * 0.18,
-        y + size * 0.3
+        y + size * 0.30
       );
 
       ctx.lineTo(
         x + size * 0.82,
-        y + size * 0.3
+        y + size * 0.30
       );
 
       ctx.stroke();
@@ -388,12 +332,12 @@ function drawIcon(ctx, type, x, y, size = 34) {
 
       ctx.moveTo(
         x + size * 0.18,
-        y + size * 0.7
+        y + size * 0.70
       );
 
       ctx.lineTo(
         x + size * 0.82,
-        y + size * 0.7
+        y + size * 0.70
       );
 
       ctx.stroke();
@@ -408,11 +352,10 @@ function drawIcon(ctx, type, x, y, size = 34) {
   ctx.restore();
 }
 
-/**
- * Vẽ góc khung bằng đường Canvas thay vì ký tự Unicode.
- *
- * Như vậy ╭ ╮ ╰ ╯ cũng không phụ thuộc font.
- */
+/* =========================================================
+ * FRAME CORNERS
+ * ======================================================= */
+
 function drawFrameCorner(
   ctx,
   x,
@@ -432,8 +375,15 @@ function drawFrameCorner(
 
   if (top) {
     if (side === 'left') {
-      ctx.moveTo(x, y + corner);
-      ctx.lineTo(x, y + 4);
+      ctx.moveTo(
+        x,
+        y + corner
+      );
+
+      ctx.lineTo(
+        x,
+        y + 4
+      );
 
       ctx.quadraticCurveTo(
         x,
@@ -521,18 +471,14 @@ function drawFrameCorner(
   ctx.restore();
 }
 
-/**
- * Vẽ thanh trang trí tự cân:
+/* =========================================================
+ * DECORATED TITLE / SIGNATURE
  *
- * TOP:
- * ╭──── ✦ [ICON] PHÒNG CỦA KHÁNH ✦ ────╮
+ * ╭──── ✦ ✦ ✦ ROOM ✦ ✦ ✦ ────╮
  *
- * BOTTOM:
- * ╰──── ✦ Khủng Long Con ✦ ─────────────╯
- *
- * Đường kẻ được tính bằng pixel thực tế,
- * không đếm số ký tự.
- */
+ * ╰──── ✦ ✦ ✦ SERVER ✦ ✦ ✦ ───╯
+ * ======================================================= */
+
 function drawCenteredDecoratedLine(
   ctx,
   y,
@@ -541,7 +487,6 @@ function drawCenteredDecoratedLine(
   options = {}
 ) {
   const {
-    icon = null,
     top = true,
     startSize = 34,
     minSize = 20
@@ -559,22 +504,18 @@ function drawCenteredDecoratedLine(
     cleanCanvasText(text);
 
   /*
-   * Dùng dấu ✦ vì ký tự này đang render tốt.
-   * Nếu môi trường nào không hỗ trợ, có thể vẽ diamond bằng Canvas.
+   * 3 dấu sao mỗi bên.
    */
   const label =
-    `✦ ${cleanText} ✦`;
+    `✦ ✦ ✦ ${cleanText} ✦ ✦ ✦`;
 
   /*
-   * Khoảng dành cho icon loa.
+   * Tự giảm font nếu tên quá dài.
    */
-  const iconSpace =
-    icon ? 48 : 0;
-
   fitFont(
     ctx,
     label,
-    innerWidth - iconSpace - 100,
+    innerWidth - 100,
     startSize,
     minSize,
     700
@@ -583,19 +524,19 @@ function drawCenteredDecoratedLine(
   const textWidth =
     ctx.measureText(label).width;
 
-  const groupWidth =
-    textWidth + iconSpace;
+  /*
+   * Canh chính giữa toàn bộ label.
+   */
+  const textStartX =
+    width / 2 - textWidth / 2;
 
-  const groupStartX =
-    width / 2 - groupWidth / 2;
-
-  const groupEndX =
-    groupStartX + groupWidth;
+  const textEndX =
+    textStartX + textWidth;
 
   /*
-   * Khoảng cách giữa đường kẻ và chữ.
+   * Khoảng cách giữa chữ và đường kẻ.
    */
-  const gap = 14;
+  const gap = 16;
 
   const leftLineStart =
     leftEdge + 12;
@@ -603,20 +544,20 @@ function drawCenteredDecoratedLine(
   const leftLineEnd =
     Math.max(
       leftLineStart,
-      groupStartX - gap
+      textStartX - gap
     );
 
   const rightLineStart =
     Math.min(
       rightEdge - 12,
-      groupEndX + gap
+      textEndX + gap
     );
 
   const rightLineEnd =
     rightEdge - 12;
 
   /*
-   * Vẽ đường kẻ.
+   * Vẽ hai đường ngang.
    */
   ctx.save();
 
@@ -651,7 +592,7 @@ function drawCenteredDecoratedLine(
   ctx.restore();
 
   /*
-   * Vẽ góc trái/phải.
+   * Vẽ hai góc.
    */
   drawFrameCorner(
     ctx,
@@ -670,20 +611,7 @@ function drawCenteredDecoratedLine(
   );
 
   /*
-   * Icon loa được vẽ riêng.
-   */
-  if (icon) {
-    drawIcon(
-      ctx,
-      icon,
-      groupStartX,
-      y - 18,
-      36
-    );
-  }
-
-  /*
-   * Vẽ chữ.
+   * Vẽ tiêu đề chính giữa.
    */
   ctx.fillStyle = '#e2e6ff';
   ctx.textAlign = 'left';
@@ -691,14 +619,15 @@ function drawCenteredDecoratedLine(
 
   ctx.fillText(
     label,
-    groupStartX + iconSpace,
+    textStartX,
     y
   );
 }
 
-/**
- * Một dòng thông tin phòng.
- */
+/* =========================================================
+ * INFO ROW
+ * ======================================================= */
+
 function drawInfoRow(
   ctx,
   {
@@ -712,7 +641,7 @@ function drawInfoRow(
   }
 ) {
   /*
-   * Icon tăng lên 34px để cân với chữ.
+   * Icon lớn hơn bản cũ.
    */
   drawIcon(
     ctx,
@@ -726,12 +655,10 @@ function drawInfoRow(
   ctx.textAlign = 'left';
 
   /*
-   * Label bên trái.
+   * Label
    */
   ctx.fillStyle = '#f1f3ff';
-
-  ctx.font =
-    '700 30px sans-serif';
+  ctx.font = '700 30px sans-serif';
 
   ctx.fillText(
     String(label),
@@ -740,7 +667,7 @@ function drawInfoRow(
   );
 
   /*
-   * Value bên phải.
+   * Value
    */
   ctx.fillStyle = '#cbd1ed';
 
@@ -760,9 +687,10 @@ function drawInfoRow(
   );
 }
 
-/**
- * Render toàn bộ Message 1 thành một card.
- */
+/* =========================================================
+ * MAIN ROOM CARD
+ * ======================================================= */
+
 async function renderRoomCard({
   owner,
   ownerName,
@@ -797,6 +725,10 @@ async function renderRoomCard({
     loadImage
   } = canvasLib;
 
+  /* =====================================================
+   * TEXT DATA
+   * =================================================== */
+
   const safeOwnerName =
     cleanCanvasText(
       ownerName ||
@@ -805,12 +737,45 @@ async function renderRoomCard({
       'Owner'
     );
 
-  const safeRoomName =
+  /*
+   * Tên phòng.
+   *
+   * Sau cleanCanvasText(), tiếp tục loại mọi ký tự
+   * trang trí ở ĐẦU tên phòng.
+   *
+   * Ví dụ:
+   *
+   * 🔊・PHÒNG CỦA KHÁNH
+   * 🎧 PHÒNG CỦA KHÁNH
+   * ♪ PHÒNG CỦA KHÁNH
+   *
+   * đều trở thành:
+   *
+   * PHÒNG CỦA KHÁNH
+   *
+   * Đây chỉ là tên HIỂN THỊ trên card.
+   * Không đổi tên voice channel thật.
+   */
+  let safeRoomName =
     cleanCanvasText(
       roomName ||
       `PHÒNG CỦA ${safeOwnerName}`
-    )
-      .toUpperCase();
+    );
+
+  safeRoomName = safeRoomName
+    .replace(/^[^\p{L}\p{N}]+/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+
+  /*
+   * Fallback nếu sau khi lọc tên bị rỗng.
+   */
+  if (!safeRoomName) {
+    safeRoomName =
+      `PHÒNG CỦA ${safeOwnerName}`
+        .toUpperCase();
+  }
 
   const safeSignature =
     cleanCanvasText(
@@ -827,9 +792,13 @@ async function renderRoomCard({
   const safeLimit =
     limit === null ||
     limit === undefined ||
-    limit === 0
+    Number(limit) === 0
       ? '∞'
       : String(limit);
+
+  /* =====================================================
+   * AVATAR
+   * =================================================== */
 
   const avatarUrl =
     owner.user.displayAvatarURL({
@@ -837,6 +806,10 @@ async function renderRoomCard({
       size: 256,
       forceStatic: true
     });
+
+  /* =====================================================
+   * CACHE
+   * =================================================== */
 
   const cacheKey =
     JSON.stringify({
@@ -855,10 +828,10 @@ async function renderRoomCard({
     return cache.get(cacheKey);
   }
 
-  /*
-   * Card lớn hơn một chút để chữ/icon lớn
-   * vẫn có khoảng thở.
-   */
+  /* =====================================================
+   * CANVAS
+   * =================================================== */
+
   const width = 760;
   const height = 700;
 
@@ -871,11 +844,9 @@ async function renderRoomCard({
   const ctx =
     canvas.getContext('2d');
 
-  /*
-   * =============================
+  /* =====================================================
    * BACKGROUND
-   * =============================
-   */
+   * =================================================== */
 
   const bg =
     ctx.createLinearGradient(
@@ -910,7 +881,7 @@ async function renderRoomCard({
   );
 
   /*
-   * Viền card ngoài.
+   * Viền ngoài.
    */
   ctx.strokeStyle = '#313963';
   ctx.lineWidth = 2;
@@ -922,6 +893,9 @@ async function renderRoomCard({
     height - 18
   );
 
+  /*
+   * Viền sáng nhẹ phía trong.
+   */
   ctx.strokeStyle =
     'rgba(111, 128, 255, 0.18)';
 
@@ -934,11 +908,9 @@ async function renderRoomCard({
     height - 28
   );
 
-  /*
-   * =============================
-   * AVATAR OWNER
-   * =============================
-   */
+  /* =====================================================
+   * LOAD AVATAR
+   * =================================================== */
 
   let avatar;
 
@@ -963,12 +935,10 @@ async function renderRoomCard({
 
   const radius = 76;
 
-  /*
-   * Glow xanh/tím cố định.
-   *
-   * Không đổi theo speaking để tránh render/edit
-   * message liên tục.
-   */
+  /* =====================================================
+   * AVATAR GLOW
+   * =================================================== */
+
   const glow =
     ctx.createRadialGradient(
       cx,
@@ -976,17 +946,17 @@ async function renderRoomCard({
       radius,
       cx,
       cy,
-      radius + 26
+      radius + 28
     );
 
   glow.addColorStop(
     0,
-    'rgba(108, 136, 255, 0.34)'
+    'rgba(108, 136, 255, 0.38)'
   );
 
   glow.addColorStop(
     0.55,
-    'rgba(124, 112, 255, 0.16)'
+    'rgba(124, 112, 255, 0.18)'
   );
 
   glow.addColorStop(
@@ -1001,16 +971,17 @@ async function renderRoomCard({
   ctx.arc(
     cx,
     cy,
-    radius + 28,
+    radius + 30,
     0,
     Math.PI * 2
   );
 
   ctx.fill();
 
-  /*
-   * Vòng gradient.
-   */
+  /* =====================================================
+   * AVATAR GRADIENT RING
+   * =================================================== */
+
   const ring =
     ctx.createLinearGradient(
       cx - radius,
@@ -1025,7 +996,7 @@ async function renderRoomCard({
   );
 
   ring.addColorStop(
-    0.5,
+    0.50,
     '#7183ff'
   );
 
@@ -1049,7 +1020,7 @@ async function renderRoomCard({
   ctx.stroke();
 
   /*
-   * Viền tối giữa avatar và glow.
+   * Viền tối giữa avatar và ring.
    */
   ctx.beginPath();
 
@@ -1065,9 +1036,10 @@ async function renderRoomCard({
   ctx.lineWidth = 5;
   ctx.stroke();
 
-  /*
-   * Avatar tròn.
-   */
+  /* =====================================================
+   * DRAW AVATAR
+   * =================================================== */
+
   ctx.save();
 
   ctx.beginPath();
@@ -1092,11 +1064,13 @@ async function renderRoomCard({
 
   ctx.restore();
 
-  /*
-   * =============================
-   * KHUNG TRÊN + TÊN PHÒNG
-   * =============================
-   */
+  /* =====================================================
+   * TOP TITLE
+   *
+   * Không còn icon loa.
+   *
+   * ✦ ✦ ✦ PHÒNG CỦA KHÁNH ✦ ✦ ✦
+   * =================================================== */
 
   drawCenteredDecoratedLine(
     ctx,
@@ -1104,18 +1078,15 @@ async function renderRoomCard({
     safeRoomName,
     width,
     {
-      icon: 'speaker',
       top: true,
       startSize: 34,
       minSize: 21
     }
   );
 
-  /*
-   * =============================
-   * THÔNG TIN PHÒNG
-   * =============================
-   */
+  /* =====================================================
+   * ROOM INFO
+   * =================================================== */
 
   const rows = [
     {
@@ -1153,10 +1124,15 @@ async function renderRoomCard({
       icon: 'globe',
       label: 'Khu vực',
       value:
-        safeRegion || 'Tự động'
+        safeRegion ||
+        'Tự động'
     }
   ];
 
+  /*
+   * Khoảng cách các dòng được tăng nhẹ
+   * để chữ/icon lớn vẫn thoáng.
+   */
   let y = 320;
 
   for (const row of rows) {
@@ -1171,11 +1147,11 @@ async function renderRoomCard({
     y += 61;
   }
 
-  /*
-   * =============================
-   * KHUNG DƯỚI + TÊN SERVER
-   * =============================
-   */
+  /* =====================================================
+   * BOTTOM SIGNATURE
+   *
+   * ✦ ✦ ✦ SERVER NAME ✦ ✦ ✦
+   * =================================================== */
 
   drawCenteredDecoratedLine(
     ctx,
@@ -1189,11 +1165,9 @@ async function renderRoomCard({
     }
   );
 
-  /*
-   * =============================
+  /* =====================================================
    * OUTPUT
-   * =============================
-   */
+   * =================================================== */
 
   const buffer =
     canvas.toBuffer(
@@ -1201,10 +1175,7 @@ async function renderRoomCard({
     );
 
   /*
-   * Cache có giới hạn.
-   *
-   * Tránh bot chạy lâu rồi giữ vô hạn ảnh panel
-   * trong RAM.
+   * Không để cache tăng vô hạn.
    */
   if (cache.size >= 32) {
     cache.clear();
@@ -1218,13 +1189,14 @@ async function renderRoomCard({
   return buffer;
 }
 
-/**
- * Giữ tương thích với index.js cũ nếu vẫn gọi
+/* =========================================================
+ * COMPATIBILITY
+ *
+ * Giữ hàm này nếu index.js cũ vẫn đang gọi
  * renderOwnerAvatarCard().
- */
-async function renderOwnerAvatarCard(
-  owner
-) {
+ * ======================================================= */
+
+async function renderOwnerAvatarCard(owner) {
   if (!owner?.user) {
     return null;
   }
@@ -1244,7 +1216,7 @@ async function renderOwnerAvatarCard(
       1,
 
     limit:
-      '∞',
+      0,
 
     locked:
       false,
@@ -1262,6 +1234,10 @@ async function renderOwnerAvatarCard(
       'VoiceHDK Bot'
   });
 }
+
+/* =========================================================
+ * EXPORT
+ * ======================================================= */
 
 module.exports = {
   renderRoomCard,
