@@ -2,25 +2,19 @@
 
 const cache = new Map();
 
+
 /* =========================================================
  * DESIGN SIZE
  *
- * Thiết kế gốc: 760 x 820
- * Output mới:   912 x 984
- *
- * Toàn bộ card lớn hơn đúng 20%.
+ * Render trực tiếp 760 x 820.
+ * Không scale 120% nữa để giảm kích thước PNG và tải nhẹ hơn.
  * ======================================================= */
 
 const DESIGN_WIDTH = 760;
 const DESIGN_HEIGHT = 820;
 
-const SCALE = 1.20;
-
-const OUTPUT_WIDTH =
-  Math.round(DESIGN_WIDTH * SCALE);
-
-const OUTPUT_HEIGHT =
-  Math.round(DESIGN_HEIGHT * SCALE);
+const OUTPUT_WIDTH = DESIGN_WIDTH;
+const OUTPUT_HEIGHT = DESIGN_HEIGHT;
 
 
 /* =========================================================
@@ -348,14 +342,21 @@ function drawTinyDiamond(
  *
  * ⊹₊˚‧︵‿₊୨ ♥ ୧₊‿︵‧˚₊⊹
  *
- * Vẽ bằng Canvas để không lỗi font.
+ * Không dùng Unicode để tránh tofu.
+ *
+ * flipVertical:
+ * false = họa tiết trên
+ * true  = lật dọc họa tiết dưới
+ *
+ * Hai họa tiết sẽ hướng vào avatar.
  * ======================================================= */
 
 function drawSoftOrnament(
   ctx,
   centerX,
   y,
-  scale = 1
+  scale = 1,
+  flipVertical = false
 ) {
   const span =
     150 * scale;
@@ -363,17 +364,30 @@ function drawSoftOrnament(
   const gradient =
     createGradient(
       ctx,
-
       centerX - span,
       y,
-
       centerX + span,
       y,
-
       0.64
     );
 
   ctx.save();
+
+  /*
+   * Lật quanh chính trục y của họa tiết.
+   * Không làm thay đổi vị trí của ornament.
+   */
+  if (flipVertical) {
+    ctx.translate(
+      0,
+      y * 2
+    );
+
+    ctx.scale(
+      1,
+      -1
+    );
+  }
 
   ctx.strokeStyle =
     gradient;
@@ -409,9 +423,7 @@ function drawSoftOrnament(
       s;
 
 
-    /* -------------------------
-     * Dấu cộng
-     * ----------------------- */
+    /* Dấu cộng */
 
     ctx.beginPath();
 
@@ -438,9 +450,7 @@ function drawSoftOrnament(
     ctx.stroke();
 
 
-    /* -------------------------
-     * Chấm
-     * ----------------------- */
+    /* Chấm */
 
     ctx.beginPath();
 
@@ -461,9 +471,7 @@ function drawSoftOrnament(
     ctx.fill();
 
 
-    /* -------------------------
-     * Diamond
-     * ----------------------- */
+    /* Diamond */
 
     drawTinyDiamond(
       ctx,
@@ -1129,7 +1137,7 @@ function drawIcon(
   type,
   x,
   y,
-  size = 34
+  size = 40
 ) {
   ctx.save();
 
@@ -1282,6 +1290,9 @@ function drawIcon(
 
   /* =====================================================
    * TRUSTED
+   *
+   * Tim được tăng riêng để kích thước thị giác
+   * đồng bộ với các icon còn lại.
    * =================================================== */
 
   else if (
@@ -1291,15 +1302,15 @@ function drawIcon(
       ctx,
 
       x + size * 0.50,
-      y + size * 0.48,
+      y + size * 0.47,
 
-      size * 0.25,
+      size * 0.36,
 
       gradient,
 
       false,
 
-      3
+      4
     );
   }
 
@@ -1472,6 +1483,9 @@ function drawIcon(
 
 /* =========================================================
  * INFO ROW
+ *
+ * Chữ và icon được tăng kích thước để tận dụng
+ * khoảng trống của card.
  * ======================================================= */
 
 function drawInfoRow(
@@ -1483,9 +1497,9 @@ function drawInfoRow(
     valueColor,
     y,
 
-    iconX = 86,
-    labelX = 136,
-    valueX = 395
+    iconX = 68,
+    labelX = 122,
+    valueX = 390
   }
 ) {
   drawIcon(
@@ -1495,9 +1509,9 @@ function drawInfoRow(
 
     iconX,
 
-    y - 17,
+    y - 20,
 
-    34
+    40
   );
 
   ctx.textBaseline =
@@ -1510,7 +1524,7 @@ function drawInfoRow(
     THEME.text;
 
   ctx.font =
-    '700 30px sans-serif';
+    '700 36px sans-serif';
 
   ctx.fillText(
     String(label),
@@ -1527,11 +1541,11 @@ function drawInfoRow(
 
     String(value),
 
-    300,
+    310,
 
-    30,
+    36,
 
-    20,
+    24,
 
     600
   );
@@ -1695,10 +1709,7 @@ async function renderRoomCard({
       hidden,
       safeRegion,
       safeRoomName,
-      safeSignature,
-
-      scale:
-        SCALE
+      safeSignature
     });
 
 
@@ -1714,7 +1725,8 @@ async function renderRoomCard({
   /* =====================================================
    * OUTPUT CANVAS
    *
-   * 912 x 984
+   * Render trực tiếp 760 x 820.
+   * Không scale.
    * =================================================== */
 
   const canvas =
@@ -1729,29 +1741,6 @@ async function renderRoomCard({
       '2d'
     );
 
-
-  /*
-   * QUAN TRỌNG:
-   *
-   * Từ đây toàn bộ code tiếp tục sử dụng
-   * hệ tọa độ 760 x 820.
-   *
-   * Canvas tự phóng mọi thứ lên 120%.
-   */
-
-  ctx.scale(
-    SCALE,
-    SCALE
-  );
-
-
-  /*
-   * width / height phía dưới PHẢI là
-   * kích thước thiết kế gốc.
-   *
-   * Không dùng 912 x 984 ở các phép tính
-   * bố cục phía dưới.
-   */
 
   const width =
     DESIGN_WIDTH;
@@ -1801,7 +1790,7 @@ async function renderRoomCard({
   /* =====================================================
    * OUTER BORDER
    *
-   * Giữ mức nhẹ ~50%
+   * Giữ mức nhẹ như bản hiện tại.
    * =================================================== */
 
   const outerBorder =
@@ -1932,14 +1921,15 @@ async function renderRoomCard({
   /* =====================================================
    * TRANG TRÍ TRÊN AVATAR
    *
-   * ⊹₊˚‧︵‿₊୨ ♥ ୧₊‿︵‧˚₊⊹
+   * Hướng xuống avatar.
    * =================================================== */
 
   drawSoftOrnament(
     ctx,
     width / 2,
     48,
-    0.90
+    0.90,
+    false
   );
 
 
@@ -1963,6 +1953,13 @@ async function renderRoomCard({
     return null;
   }
 
+
+  /*
+   * GIỮ NGUYÊN avatar:
+   *
+   * center y = 145
+   * radius   = 76
+   */
 
   const cx =
     width / 2;
@@ -2176,29 +2173,16 @@ async function renderRoomCard({
   /* =====================================================
    * TRANG TRÍ DƯỚI AVATAR
    *
-   * ⊹₊˚‧︵‿₊୨ ♥ ୧₊‿︵‧˚₊⊹
+   * Lật dọc để hướng NGƯỢC LẠI với họa tiết trên,
+   * tức hai họa tiết cùng hướng vào avatar.
    * =================================================== */
 
   drawSoftOrnament(
     ctx,
     width / 2,
     250,
-    0.92
-  );
-
-
-  /* =====================================================
-   * HEARTBEAT
-   *
-   * ﮩ٨ـﮩﮩ٨ـ♡ﮩ٨ـﮩﮩ٨ـ
-   *
-   * Gần tên phòng nhất.
-   * =================================================== */
-
-  drawHeartbeatOrnament(
-    ctx,
-    width / 2,
-    282
+    0.92,
+    true
   );
 
 
@@ -2207,13 +2191,13 @@ async function renderRoomCard({
    *
    * ・❥・ PHÒNG CỦA KHÁNH ・❥・
    *
-   * Hai bên quay vào nhau.
+   * Chữ lớn hơn bản cũ.
    * =================================================== */
 
   drawTitleWithLoveMarks(
     ctx,
 
-    326,
+    300,
 
     safeRoomName,
 
@@ -2221,11 +2205,26 @@ async function renderRoomCard({
 
     {
       startSize:
-        34,
+        40,
 
       minSize:
-        21
+        25
     }
+  );
+
+
+  /* =====================================================
+   * HEARTBEAT
+   *
+   * ﮩ٨ـﮩﮩ٨ـ♡ﮩ٨ـﮩﮩ٨ـ
+   *
+   * NẰM DƯỚI TÊN PHÒNG.
+   * =================================================== */
+
+  drawHeartbeatOrnament(
+    ctx,
+    width / 2,
+    342
   );
 
 
@@ -2331,8 +2330,13 @@ async function renderRoomCard({
   ];
 
 
+  /*
+   * Chữ/icon lớn hơn nên dùng khoảng cách 54px.
+   * Bắt đầu sau heartbeat.
+   */
+
   let y =
-    390;
+    398;
 
 
   for (
@@ -2348,7 +2352,7 @@ async function renderRoomCard({
     );
 
     y +=
-      56;
+      54;
   }
 
 
@@ -2357,7 +2361,7 @@ async function renderRoomCard({
    *
    * ・❥・ Khủng Long Con ・❥・
    *
-   * Hai bên quay vào nhau.
+   * Chữ lớn hơn bản cũ.
    * =================================================== */
 
   drawTitleWithLoveMarks(
@@ -2371,10 +2375,10 @@ async function renderRoomCard({
 
     {
       startSize:
-        31,
+        36,
 
       minSize:
-        20,
+        24,
 
       footer:
         true
@@ -2387,9 +2391,9 @@ async function renderRoomCard({
    *
    * Canvas thực tế:
    *
-   * 912 x 984
+   * 760 x 820
    *
-   * Tức lớn hơn bản 760 x 820 đúng 20%.
+   * Không còn SCALE 1.20.
    * =================================================== */
 
   const buffer =
