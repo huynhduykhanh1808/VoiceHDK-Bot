@@ -4469,24 +4469,24 @@ function buildRoomButtons(
 
   return [
     new ActionRowBuilder().addComponents(
-      mk('room_lock', state.locked ? 'Mở' : 'Khóa', state.locked ? '🔓' : '🔒', state.locked ? ButtonStyle.Success : ButtonStyle.Secondary),
-      mk('room_hide', state.hidden ? 'Hiện' : 'Ẩn', state.hidden ? '👁️' : '🙈', state.hidden ? ButtonStyle.Success : ButtonStyle.Primary),
-      mk('room_rename', 'Đổi tên', '✏️', ButtonStyle.Primary)
+      mk('room_lock', state.locked ? 'MỞ' : 'KHÓA', state.locked ? '🔓' : '🔒', state.locked ? ButtonStyle.Success : ButtonStyle.Primary),
+      mk('room_hide', state.hidden ? 'HIỆN' : 'ẨN', state.hidden ? '👁️' : '🙈', state.hidden ? ButtonStyle.Success : ButtonStyle.Primary),
+      mk('room_limit', 'GIỚI HẠN', '👥', ButtonStyle.Primary)
     ),
     new ActionRowBuilder().addComponents(
-      mk('room_limit', 'Giới hạn', '👥', ButtonStyle.Primary),
-      mk('room_reset', 'Đặt lại', '♻️', ButtonStyle.Secondary),
-      mk('room_fix_panel', 'Fix Panel', '🔧', ButtonStyle.Secondary)
+      mk('room_rename', 'NAME', '✏️', ButtonStyle.Primary),
+      mk('room_reset', 'ĐẶT LẠI', '♻️', ButtonStyle.Success),
+      mk('room_fix_panel', 'FIX', '🔧', ButtonStyle.Primary)
     ),
     new ActionRowBuilder().addComponents(
-      mk('room_trust', 'Tin cậy', '❤️', ButtonStyle.Success),
-      mk('room_untrust', 'Hủy tin cậy', '🖤', ButtonStyle.Secondary),
-      mk('room_invite', 'Mời', '✉️', ButtonStyle.Success)
+      mk('room_transfer', 'CHUYỂN CHỦ', '👑', ButtonStyle.Success),
+      mk('room_trust', 'TIN CẬY', '❤️', ButtonStyle.Success),
+      mk('room_invite', 'MỜI', '✉️', ButtonStyle.Success)
     ),
     new ActionRowBuilder().addComponents(
-      mk('room_transfer', 'Chuyển chủ', '👑', ButtonStyle.Primary),
-      mk('room_kick', 'Đuổi', '👢', ButtonStyle.Danger),
-      mk('room_deny', 'Cấm', '⛔', ButtonStyle.Danger)
+      mk('room_mute_toggle', 'ON/OFF', '🔇', ButtonStyle.Primary),
+      mk('room_kick', 'ĐUỔI', '👢', ButtonStyle.Danger),
+      mk('room_deny', 'CẤM', '⛔', ButtonStyle.Danger)
     )
   ];
 }
@@ -4630,36 +4630,70 @@ async function buildRoomPanelPayload(
   return { ...dashboard, components: buildRoomButtons(channel) };
 }
 
-async function buildRoomAuxPayload(channel, room) {
+async function buildRoomAuxPayload(channel, room, requestedPage = 0) {
   const trusted = await getTrustedMembers(channel.id);
-  const lines = [];
+  const members = [];
   for (const row of trusted) {
     const member = await getGuildMember(channel.guild, String(row.member_id));
-    if (member) lines.push(`❤️ <@${member.id}>`);
+    if (member) members.push(member);
   }
-  let trustedText = lines.length ? lines.join('\n') : '.....';
-  // Keep a safe margin below Discord embed limits. Full IDs stay in DB.
-  if (trustedText.length > 3500) {
-    let used = 0, shown = [];
-    for (const line of lines) {
-      if (used + line.length + 1 > 3200) break;
-      shown.push(line); used += line.length + 1;
-    }
-    trustedText = `${shown.join('\n')}\n… và ${lines.length - shown.length} người khác`;
-  }
-  // Components V2 lets text appear after interactive rows. With legacy
-  // messages Discord always renders embeds/text before all select menus, which
-  // is why the old panel showed the trusted list in the wrong place.
+
+  const pageSize = 3;
+  const pageCount = Math.max(1, Math.ceil(members.length / pageSize));
+  const page = Math.min(Math.max(Number(requestedPage) || 0, 0), pageCount - 1);
+  const shown = members.slice(page * pageSize, page * pageSize + pageSize);
   const regionRow = await buildRegionSelectRow(channel);
   const memberRow = buildMemberSelectRow();
-  const trustedDisplay = new TextDisplayBuilder().setContent(
-    `### ❤️ Người Tin cậy — ${lines.length}\n${trustedText}`
-  );
   const container = new ContainerBuilder()
     .setAccentColor(0x8899E8)
     .addActionRowComponents(regionRow)
     .addActionRowComponents(memberRow)
-    .addTextDisplayComponents(trustedDisplay);
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        `### ❤️ Người Tin cậy — ${members.length}${pageCount > 1 ? `  •  Trang ${page + 1}/${pageCount}` : ''}`
+      )
+    );
+
+  if (!shown.length) {
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent('.....')
+    );
+  } else {
+    shown.forEach((member, index) => {
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`room_trusted_name:${member.id}`)
+          .setLabel(safeMemberName(member).slice(0, 80) || member.id)
+          .setEmoji('❤️')
+          .setStyle(ButtonStyle.Success)
+          .setDisabled(true),
+        new ButtonBuilder()
+          .setCustomId(`room_untrust_member:${member.id}`)
+          .setLabel('XÓA')
+          .setEmoji('❌')
+          .setStyle(ButtonStyle.Danger)
+      );
+
+      if (index === shown.length - 1 && pageCount > 1) {
+        row.addComponents(
+          new ButtonBuilder()
+            .setCustomId(`room_trusted_page:${Math.max(0, page - 1)}`)
+            .setLabel('TRƯỚC')
+            .setEmoji('◀️')
+            .setStyle(ButtonStyle.Primary)
+            .setDisabled(page === 0),
+          new ButtonBuilder()
+            .setCustomId(`room_trusted_page:${Math.min(pageCount - 1, page + 1)}`)
+            .setLabel('SAU')
+            .setEmoji('▶️')
+            .setStyle(ButtonStyle.Primary)
+            .setDisabled(page === pageCount - 1)
+        );
+      }
+
+      container.addActionRowComponents(row);
+    });
+  }
 
   return {
     components: [container],
@@ -6734,19 +6768,63 @@ async function handleRoomTrust(interaction) {
   await tempFollowUp(interaction, `❤️ Đã thêm ${safeMemberName(member)} vào danh sách Tin cậy.`);
 }
 
-async function handleRoomUntrust(interaction) {
+async function handleRoomMuteToggle(interaction) {
   await safeDeferUpdate(interaction);
   const context = await getOwnerRoomContext(interaction);
   if (!context.ok) return tempFollowUp(interaction, context.message, { error: true });
   const selected = await getRequiredSelectedMember(interaction, context);
   if (!selected.ok) return tempFollowUp(interaction, selected.message, { error: true });
   const member = selected.member;
-  const removed = await removeTrustedMember(context.channel.id, member.id);
-  if (!removed) return tempFollowUp(interaction, `🖤 ${safeMemberName(member)} chưa nằm trong danh sách Tin cậy.`, { error: true });
+
+  if (member.voice?.channelId !== context.channel.id) {
+    return tempFollowUp(interaction, `⚠️ ${safeMemberName(member)} không có mặt trong phòng này.`, { error: true });
+  }
+
+  const overwrite = context.channel.permissionOverwrites.cache.get(member.id);
+  const muted = overwrite?.deny?.has(PermissionsBitField.Flags.Speak) === true;
+
+  await safeEditOverwrite(
+    context.channel,
+    member,
+    { Speak: muted ? true : false },
+    muted ? `${BOT_NAME}: bật lại microphone` : `${BOT_NAME}: tắt microphone`
+  );
+
   clearSelectedMember(interaction.guild.id, context.channel.id, context.owner.id);
   await refreshRoomPanelSafe(context.channel.id);
-  await sendActionLog(interaction.guild, '🖤', context.owner, `Hủy Tin cậy của ${safeMemberName(member)}`);
-  await tempFollowUp(interaction, `🖤 Đã hủy Tin cậy của ${safeMemberName(member)}.`);
+  await sendActionLog(
+    interaction.guild,
+    muted ? '🔊' : '🔇',
+    safeMemberName(context.owner),
+    `${muted ? 'Bật lại' : 'Tắt'} quyền nói của ${safeMemberName(member)}`
+  );
+  await tempFollowUp(
+    interaction,
+    muted
+      ? `🔊 Đã bật lại quyền nói cho ${safeMemberName(member)}.`
+      : `🔇 Đã tắt quyền nói của ${safeMemberName(member)}.`
+  );
+}
+
+async function handleRoomUntrustMember(interaction, memberId) {
+  await safeDeferUpdate(interaction);
+  const context = await getOwnerRoomContext(interaction);
+  if (!context.ok) return tempFollowUp(interaction, context.message, { error: true });
+  if (!isSnowflake(String(memberId || ''))) return tempFollowUp(interaction, '❌ Thành viên không hợp lệ.', { error: true });
+  const member = await getGuildMember(interaction.guild, memberId);
+  const removed = await removeTrustedMember(context.channel.id, memberId);
+  if (!removed) return tempFollowUp(interaction, '❌ Người này không còn trong danh sách Tin cậy.', { error: true });
+  await refreshRoomPanelSafe(context.channel.id);
+  const name = member ? safeMemberName(member) : memberId;
+  await sendActionLog(interaction.guild, '❌', context.owner, `Hủy Tin cậy của ${name}`);
+  await tempFollowUp(interaction, `❌ Đã hủy Tin cậy của ${name}.`);
+}
+
+async function handleTrustedPage(interaction, requestedPage) {
+  const context = await getOwnerRoomContext(interaction);
+  if (!context.ok) return tempReply(interaction, context.message, { error: true });
+  const payload = await buildRoomAuxPayload(context.channel, context.room, requestedPage);
+  await interaction.update(payload);
 }
 
 async function handleRoomFixPanel(interaction) {
@@ -11816,6 +11894,16 @@ async function handleSystemResetCancel(
 async function routeButtonInteraction(
   interaction
 ) {
+  if (interaction.customId.startsWith('room_untrust_member:')) {
+    await handleRoomUntrustMember(interaction, interaction.customId.split(':')[1]);
+    return;
+  }
+
+  if (interaction.customId.startsWith('room_trusted_page:')) {
+    await handleTrustedPage(interaction, Number(interaction.customId.split(':')[1]));
+    return;
+  }
+
   switch (
     interaction.customId
   ) {
@@ -11899,8 +11987,8 @@ async function routeButtonInteraction(
       await handleRoomTrust(interaction);
       return;
 
-    case 'room_untrust':
-      await handleRoomUntrust(interaction);
+    case 'room_mute_toggle':
+      await handleRoomMuteToggle(interaction);
       return;
 
     case 'room_invite':
