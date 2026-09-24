@@ -1,0 +1,20 @@
+{
+  "name": "voicehdk-bot",
+  "private": true,
+  "description": "VoiceHDK Bot - Discord Temporary Voice Room System",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js",
+    "check": "node --check index.js && node tests/smoke.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "discord.js": "^14.22.1",
+    "dotenv": "^17.2.2",
+    "pg": "^8.16.3",
+    "@napi-rs/canvas": "^0.1.80"
+  }
+}
