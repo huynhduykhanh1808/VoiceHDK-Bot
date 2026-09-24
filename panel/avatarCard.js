@@ -3,7 +3,7 @@
 const cache = new Map();
 
 /**
- * Thu nhỏ font cho tới khi text vừa maxWidth.
+ * Tự giảm font nếu nội dung quá dài.
  */
 function fitFont(
   ctx,
@@ -14,11 +14,12 @@ function fitFont(
   weight = 700
 ) {
   let size = startSize;
+  const value = String(text ?? '');
 
   while (size > minSize) {
     ctx.font = `${weight} ${size}px sans-serif`;
 
-    if (ctx.measureText(text).width <= maxWidth) {
+    if (ctx.measureText(value).width <= maxWidth) {
       break;
     }
 
@@ -26,41 +27,86 @@ function fitFont(
   }
 
   ctx.font = `${weight} ${size}px sans-serif`;
+
   return size;
 }
 
 /**
- * Vẽ icon đơn giản bằng Canvas thay cho emoji Unicode.
+ * Làm sạch chuỗi trước khi Canvas render.
  *
- * Lý do:
- * Font trong môi trường Render/Linux có thể không có emoji,
- * khiến Canvas render thành ô vuông □.
+ * Emoji Unicode trong font Linux/Render có thể hiện thành □.
+ * Icon của panel được vẽ bằng Canvas riêng nên không cần emoji
+ * nằm trong chuỗi.
  */
-function drawIcon(ctx, type, x, y, size = 24) {
+function cleanCanvasText(text) {
+  return String(text ?? '')
+    .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')
+    .replace(/[\u2600-\u27BF]/gu, '')
+    .replace(/\uFE0F/gu, '')
+    .replace(/\u200D/gu, '')
+    .replace(/[□■▪▫]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Vẽ icon trực tiếp bằng Canvas.
+ *
+ * Không dùng emoji Unicode để tránh lỗi ô vuông □
+ * trên Render/Linux.
+ */
+function drawIcon(ctx, type, x, y, size = 34) {
   ctx.save();
 
-  ctx.lineWidth = Math.max(2, size * 0.08);
+  ctx.lineWidth = Math.max(2, size * 0.075);
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
   switch (type) {
-    // Loa
+    /**
+     * LOA
+     */
     case 'speaker': {
-      ctx.fillStyle = '#8fc7ff';
+      ctx.fillStyle = '#7fc8ff';
+      ctx.strokeStyle = '#7fc8ff';
 
       ctx.beginPath();
-      ctx.moveTo(x, y + size * 0.38);
-      ctx.lineTo(x + size * 0.28, y + size * 0.38);
-      ctx.lineTo(x + size * 0.58, y + size * 0.12);
-      ctx.lineTo(x + size * 0.58, y + size * 0.88);
-      ctx.lineTo(x + size * 0.28, y + size * 0.62);
-      ctx.lineTo(x, y + size * 0.62);
+
+      ctx.moveTo(
+        x,
+        y + size * 0.38
+      );
+
+      ctx.lineTo(
+        x + size * 0.27,
+        y + size * 0.38
+      );
+
+      ctx.lineTo(
+        x + size * 0.58,
+        y + size * 0.12
+      );
+
+      ctx.lineTo(
+        x + size * 0.58,
+        y + size * 0.88
+      );
+
+      ctx.lineTo(
+        x + size * 0.27,
+        y + size * 0.62
+      );
+
+      ctx.lineTo(
+        x,
+        y + size * 0.62
+      );
+
       ctx.closePath();
       ctx.fill();
 
-      ctx.strokeStyle = '#8fc7ff';
-
       ctx.beginPath();
+
       ctx.arc(
         x + size * 0.55,
         y + size * 0.5,
@@ -68,9 +114,11 @@ function drawIcon(ctx, type, x, y, size = 24) {
         -Math.PI / 3,
         Math.PI / 3
       );
+
       ctx.stroke();
 
       ctx.beginPath();
+
       ctx.arc(
         x + size * 0.55,
         y + size * 0.5,
@@ -78,23 +126,55 @@ function drawIcon(ctx, type, x, y, size = 24) {
         -Math.PI / 3,
         Math.PI / 3
       );
+
       ctx.stroke();
 
       break;
     }
 
-    // Vương miện
+    /**
+     * VƯƠNG MIỆN
+     */
     case 'crown': {
-      ctx.fillStyle = '#ffd76a';
+      ctx.fillStyle = '#ffd766';
 
       ctx.beginPath();
-      ctx.moveTo(x, y + size * 0.72);
-      ctx.lineTo(x + size * 0.12, y + size * 0.25);
-      ctx.lineTo(x + size * 0.34, y + size * 0.5);
-      ctx.lineTo(x + size * 0.5, y + size * 0.16);
-      ctx.lineTo(x + size * 0.66, y + size * 0.5);
-      ctx.lineTo(x + size * 0.88, y + size * 0.25);
-      ctx.lineTo(x + size, y + size * 0.72);
+
+      ctx.moveTo(
+        x,
+        y + size * 0.72
+      );
+
+      ctx.lineTo(
+        x + size * 0.12,
+        y + size * 0.25
+      );
+
+      ctx.lineTo(
+        x + size * 0.34,
+        y + size * 0.5
+      );
+
+      ctx.lineTo(
+        x + size * 0.5,
+        y + size * 0.14
+      );
+
+      ctx.lineTo(
+        x + size * 0.66,
+        y + size * 0.5
+      );
+
+      ctx.lineTo(
+        x + size * 0.88,
+        y + size * 0.25
+      );
+
+      ctx.lineTo(
+        x + size,
+        y + size * 0.72
+      );
+
       ctx.closePath();
       ctx.fill();
 
@@ -108,21 +188,26 @@ function drawIcon(ctx, type, x, y, size = 24) {
       break;
     }
 
-    // Thành viên
+    /**
+     * THÀNH VIÊN
+     */
     case 'members': {
-      ctx.fillStyle = '#9a7cff';
+      ctx.fillStyle = '#9878ff';
 
       ctx.beginPath();
+
       ctx.arc(
         x + size * 0.34,
-        y + size * 0.32,
+        y + size * 0.31,
         size * 0.2,
         0,
         Math.PI * 2
       );
+
       ctx.fill();
 
       ctx.beginPath();
+
       ctx.arc(
         x + size * 0.7,
         y + size * 0.38,
@@ -130,9 +215,11 @@ function drawIcon(ctx, type, x, y, size = 24) {
         0,
         Math.PI * 2
       );
+
       ctx.fill();
 
       ctx.beginPath();
+
       ctx.arc(
         x + size * 0.34,
         y + size * 0.94,
@@ -140,9 +227,11 @@ function drawIcon(ctx, type, x, y, size = 24) {
         Math.PI,
         Math.PI * 2
       );
+
       ctx.fill();
 
       ctx.beginPath();
+
       ctx.arc(
         x + size * 0.72,
         y + size * 0.94,
@@ -150,17 +239,21 @@ function drawIcon(ctx, type, x, y, size = 24) {
         Math.PI,
         Math.PI * 2
       );
+
       ctx.fill();
 
       break;
     }
 
-    // Khóa / mở
+    /**
+     * KHÓA
+     */
     case 'lock': {
-      ctx.strokeStyle = '#ffcf66';
-      ctx.fillStyle = '#ffcf66';
+      ctx.strokeStyle = '#ffd166';
+      ctx.fillStyle = '#ffd166';
 
       ctx.beginPath();
+
       ctx.arc(
         x + size * 0.5,
         y + size * 0.38,
@@ -168,6 +261,7 @@ function drawIcon(ctx, type, x, y, size = 24) {
         Math.PI,
         Math.PI * 2
       );
+
       ctx.stroke();
 
       ctx.fillRect(
@@ -180,12 +274,18 @@ function drawIcon(ctx, type, x, y, size = 24) {
       break;
     }
 
-    // Mắt
+    /**
+     * MẮT
+     */
     case 'eye': {
-      ctx.strokeStyle = '#d8def8';
+      ctx.strokeStyle = '#dce2ff';
 
       ctx.beginPath();
-      ctx.moveTo(x, y + size * 0.5);
+
+      ctx.moveTo(
+        x,
+        y + size * 0.5
+      );
 
       ctx.bezierCurveTo(
         x + size * 0.22,
@@ -207,9 +307,10 @@ function drawIcon(ctx, type, x, y, size = 24) {
 
       ctx.stroke();
 
-      ctx.fillStyle = '#d8def8';
+      ctx.fillStyle = '#dce2ff';
 
       ctx.beginPath();
+
       ctx.arc(
         x + size * 0.5,
         y + size * 0.5,
@@ -217,16 +318,20 @@ function drawIcon(ctx, type, x, y, size = 24) {
         0,
         Math.PI * 2
       );
+
       ctx.fill();
 
       break;
     }
 
-    // Quả địa cầu
+    /**
+     * QUẢ ĐỊA CẦU
+     */
     case 'globe': {
-      ctx.strokeStyle = '#65cfff';
+      ctx.strokeStyle = '#5ed0ff';
 
       ctx.beginPath();
+
       ctx.arc(
         x + size * 0.5,
         y + size * 0.5,
@@ -234,9 +339,11 @@ function drawIcon(ctx, type, x, y, size = 24) {
         0,
         Math.PI * 2
       );
+
       ctx.stroke();
 
       ctx.beginPath();
+
       ctx.ellipse(
         x + size * 0.5,
         y + size * 0.5,
@@ -246,21 +353,49 @@ function drawIcon(ctx, type, x, y, size = 24) {
         0,
         Math.PI * 2
       );
+
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.moveTo(x + size * 0.1, y + size * 0.5);
-      ctx.lineTo(x + size * 0.9, y + size * 0.5);
+
+      ctx.moveTo(
+        x + size * 0.1,
+        y + size * 0.5
+      );
+
+      ctx.lineTo(
+        x + size * 0.9,
+        y + size * 0.5
+      );
+
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.moveTo(x + size * 0.18, y + size * 0.3);
-      ctx.lineTo(x + size * 0.82, y + size * 0.3);
+
+      ctx.moveTo(
+        x + size * 0.18,
+        y + size * 0.3
+      );
+
+      ctx.lineTo(
+        x + size * 0.82,
+        y + size * 0.3
+      );
+
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.moveTo(x + size * 0.18, y + size * 0.7);
-      ctx.lineTo(x + size * 0.82, y + size * 0.7);
+
+      ctx.moveTo(
+        x + size * 0.18,
+        y + size * 0.7
+      );
+
+      ctx.lineTo(
+        x + size * 0.82,
+        y + size * 0.7
+      );
+
       ctx.stroke();
 
       break;
@@ -274,99 +409,283 @@ function drawIcon(ctx, type, x, y, size = 24) {
 }
 
 /**
- * Vẽ dòng trang trí:
+ * Vẽ góc khung bằng đường Canvas thay vì ký tự Unicode.
  *
- * ╭──── ✦ TÊN PHÒNG ✦ ────╮
+ * Như vậy ╭ ╮ ╰ ╯ cũng không phụ thuộc font.
+ */
+function drawFrameCorner(
+  ctx,
+  x,
+  y,
+  side,
+  top = true
+) {
+  const corner = 12;
+
+  ctx.save();
+
+  ctx.strokeStyle = '#aab8ff';
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = 'round';
+
+  ctx.beginPath();
+
+  if (top) {
+    if (side === 'left') {
+      ctx.moveTo(x, y + corner);
+      ctx.lineTo(x, y + 4);
+
+      ctx.quadraticCurveTo(
+        x,
+        y,
+        x + 4,
+        y
+      );
+
+      ctx.lineTo(
+        x + corner,
+        y
+      );
+    } else {
+      ctx.moveTo(
+        x - corner,
+        y
+      );
+
+      ctx.lineTo(
+        x - 4,
+        y
+      );
+
+      ctx.quadraticCurveTo(
+        x,
+        y,
+        x,
+        y + 4
+      );
+
+      ctx.lineTo(
+        x,
+        y + corner
+      );
+    }
+  } else {
+    if (side === 'left') {
+      ctx.moveTo(
+        x,
+        y - corner
+      );
+
+      ctx.lineTo(
+        x,
+        y - 4
+      );
+
+      ctx.quadraticCurveTo(
+        x,
+        y,
+        x + 4,
+        y
+      );
+
+      ctx.lineTo(
+        x + corner,
+        y
+      );
+    } else {
+      ctx.moveTo(
+        x - corner,
+        y
+      );
+
+      ctx.lineTo(
+        x - 4,
+        y
+      );
+
+      ctx.quadraticCurveTo(
+        x,
+        y,
+        x,
+        y - 4
+      );
+
+      ctx.lineTo(
+        x,
+        y - corner
+      );
+    }
+  }
+
+  ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * Vẽ thanh trang trí tự cân:
  *
- * hoặc:
+ * TOP:
+ * ╭──── ✦ [ICON] PHÒNG CỦA KHÁNH ✦ ────╮
  *
- * ╰──── ✦ TÊN SERVER ✦ ────╯
+ * BOTTOM:
+ * ╰──── ✦ Khủng Long Con ✦ ─────────────╯
  *
- * Độ dài đường kẻ được tính theo pixel thực tế.
+ * Đường kẻ được tính bằng pixel thực tế,
+ * không đếm số ký tự.
  */
 function drawCenteredDecoratedLine(
   ctx,
   y,
   text,
   width,
-  leftChar,
-  rightChar,
   options = {}
 ) {
-  const margin = 44;
-  const innerWidth = width - margin * 2;
-
   const {
     icon = null,
-    startSize = 28,
-    minSize = 17
+    top = true,
+    startSize = 34,
+    minSize = 20
   } = options;
 
-  const cleanText = String(text || '').trim();
+  const margin = 40;
+
+  const leftEdge = margin;
+  const rightEdge = width - margin;
+
+  const innerWidth =
+    rightEdge - leftEdge;
+
+  const cleanText =
+    cleanCanvasText(text);
 
   /*
-   * Không đưa emoji vào chuỗi text.
-   * Icon được Canvas tự vẽ riêng.
+   * Dùng dấu ✦ vì ký tự này đang render tốt.
+   * Nếu môi trường nào không hỗ trợ, có thể vẽ diamond bằng Canvas.
    */
-  const label = `✦ ${cleanText} ✦`;
+  const label =
+    `✦ ${cleanText} ✦`;
+
+  /*
+   * Khoảng dành cho icon loa.
+   */
+  const iconSpace =
+    icon ? 48 : 0;
 
   fitFont(
     ctx,
     label,
-    innerWidth - (icon ? 110 : 54),
+    innerWidth - iconSpace - 100,
     startSize,
     minSize,
     700
   );
 
-  const textWidth = ctx.measureText(label).width;
-  const iconSpace = icon ? 38 : 0;
+  const textWidth =
+    ctx.measureText(label).width;
 
-  const totalLabelWidth = textWidth + iconSpace;
+  const groupWidth =
+    textWidth + iconSpace;
 
-  const dashWidth = Math.max(
-    0,
-    (innerWidth - totalLabelWidth - 34) / 2
-  );
+  const groupStartX =
+    width / 2 - groupWidth / 2;
 
-  // Đường kẻ trái/phải
-  ctx.strokeStyle = '#8b9cf5';
-  ctx.lineWidth = 2;
+  const groupEndX =
+    groupStartX + groupWidth;
+
+  /*
+   * Khoảng cách giữa đường kẻ và chữ.
+   */
+  const gap = 14;
+
+  const leftLineStart =
+    leftEdge + 12;
+
+  const leftLineEnd =
+    Math.max(
+      leftLineStart,
+      groupStartX - gap
+    );
+
+  const rightLineStart =
+    Math.min(
+      rightEdge - 12,
+      groupEndX + gap
+    );
+
+  const rightLineEnd =
+    rightEdge - 12;
+
+  /*
+   * Vẽ đường kẻ.
+   */
+  ctx.save();
+
+  ctx.strokeStyle = '#aab8ff';
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = 'round';
 
   ctx.beginPath();
 
-  ctx.moveTo(margin + 10, y);
-  ctx.lineTo(margin + 10 + dashWidth, y);
-
   ctx.moveTo(
-    width - margin - 10 - dashWidth,
+    leftLineStart,
     y
   );
 
   ctx.lineTo(
-    width - margin - 10,
+    leftLineEnd,
+    y
+  );
+
+  ctx.moveTo(
+    rightLineStart,
+    y
+  );
+
+  ctx.lineTo(
+    rightLineEnd,
     y
   );
 
   ctx.stroke();
 
-  /*
-   * Tính vị trí icon + chữ để cả cụm nằm giữa.
-   */
-  const groupStartX =
-    width / 2 - totalLabelWidth / 2;
+  ctx.restore();
 
+  /*
+   * Vẽ góc trái/phải.
+   */
+  drawFrameCorner(
+    ctx,
+    leftEdge,
+    y,
+    'left',
+    top
+  );
+
+  drawFrameCorner(
+    ctx,
+    rightEdge,
+    y,
+    'right',
+    top
+  );
+
+  /*
+   * Icon loa được vẽ riêng.
+   */
   if (icon) {
     drawIcon(
       ctx,
       icon,
       groupStartX,
-      y - 13,
-      26
+      y - 18,
+      36
     );
   }
 
-  ctx.fillStyle = '#dce2ff';
+  /*
+   * Vẽ chữ.
+   */
+  ctx.fillStyle = '#e2e6ff';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
 
@@ -375,34 +694,10 @@ function drawCenteredDecoratedLine(
     groupStartX + iconSpace,
     y
   );
-
-  /*
-   * Góc khung.
-   *
-   * Các ký tự ╭ ╮ ╰ ╯ thường được font Linux hỗ trợ.
-   * Nếu môi trường nào vẫn lỗi, phần này có thể chuyển
-   * sang Canvas line drawing mà không ảnh hưởng layout.
-   */
-  ctx.font = '28px sans-serif';
-  ctx.fillStyle = '#dce2ff';
-
-  ctx.textAlign = 'left';
-  ctx.fillText(
-    leftChar,
-    margin - 3,
-    y + 1
-  );
-
-  ctx.textAlign = 'right';
-  ctx.fillText(
-    rightChar,
-    width - margin + 3,
-    y + 1
-  );
 }
 
 /**
- * Vẽ một hàng thông tin.
+ * Một dòng thông tin phòng.
  */
 function drawInfoRow(
   ctx,
@@ -411,39 +706,50 @@ function drawInfoRow(
     label,
     value,
     y,
-    iconX = 100,
-    labelX = 142,
-    valueX = 405
+    iconX = 86,
+    labelX = 136,
+    valueX = 395
   }
 ) {
+  /*
+   * Icon tăng lên 34px để cân với chữ.
+   */
   drawIcon(
     ctx,
     icon,
     iconX,
-    y - 13,
-    26
+    y - 17,
+    34
   );
 
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
 
-  ctx.fillStyle = '#f0f2ff';
-  ctx.font = '600 25px sans-serif';
+  /*
+   * Label bên trái.
+   */
+  ctx.fillStyle = '#f1f3ff';
+
+  ctx.font =
+    '700 30px sans-serif';
 
   ctx.fillText(
-    label,
+    String(label),
     labelX,
     y
   );
 
-  ctx.fillStyle = '#c8cdea';
+  /*
+   * Value bên phải.
+   */
+  ctx.fillStyle = '#cbd1ed';
 
   fitFont(
     ctx,
     String(value),
-    285,
-    25,
-    17,
+    300,
+    30,
+    20,
     500
   );
 
@@ -455,7 +761,7 @@ function drawInfoRow(
 }
 
 /**
- * Render toàn bộ panel phòng thành 1 ảnh duy nhất.
+ * Render toàn bộ Message 1 thành một card.
  */
 async function renderRoomCard({
   owner,
@@ -475,31 +781,15 @@ async function renderRoomCard({
   let canvasLib;
 
   try {
-    canvasLib = require('@napi-rs/canvas');
-  } catch {
+    canvasLib =
+      require('@napi-rs/canvas');
+  } catch (error) {
+    console.error(
+      '[VoiceHDK] Không tải được @napi-rs/canvas:',
+      error
+    );
+
     return null;
-  }
-
-  const avatarUrl = owner.user.displayAvatarURL({
-    extension: 'png',
-    size: 256,
-    forceStatic: true
-  });
-
-  const cacheKey = JSON.stringify({
-    avatarUrl,
-    ownerName,
-    memberCount,
-    limit,
-    locked,
-    hidden,
-    region,
-    roomName,
-    signature
-  });
-
-  if (cache.has(cacheKey)) {
-    return cache.get(cacheKey);
   }
 
   const {
@@ -507,34 +797,107 @@ async function renderRoomCard({
     loadImage
   } = canvasLib;
 
-  const canvas = createCanvas(
-    760,
-    690
-  );
+  const safeOwnerName =
+    cleanCanvasText(
+      ownerName ||
+      owner.displayName ||
+      owner.user.username ||
+      'Owner'
+    );
 
-  const ctx = canvas.getContext('2d');
+  const safeRoomName =
+    cleanCanvasText(
+      roomName ||
+      `PHÒNG CỦA ${safeOwnerName}`
+    )
+      .toUpperCase();
+
+  const safeSignature =
+    cleanCanvasText(
+      signature ||
+      'VoiceHDK Bot'
+    );
+
+  const safeRegion =
+    cleanCanvasText(
+      region ||
+      'Tự động'
+    );
+
+  const safeLimit =
+    limit === null ||
+    limit === undefined ||
+    limit === 0
+      ? '∞'
+      : String(limit);
+
+  const avatarUrl =
+    owner.user.displayAvatarURL({
+      extension: 'png',
+      size: 256,
+      forceStatic: true
+    });
+
+  const cacheKey =
+    JSON.stringify({
+      avatarUrl,
+      safeOwnerName,
+      memberCount,
+      safeLimit,
+      locked,
+      hidden,
+      safeRegion,
+      safeRoomName,
+      safeSignature
+    });
+
+  if (cache.has(cacheKey)) {
+    return cache.get(cacheKey);
+  }
 
   /*
-   * ============================
+   * Card lớn hơn một chút để chữ/icon lớn
+   * vẫn có khoảng thở.
+   */
+  const width = 760;
+  const height = 700;
+
+  const canvas =
+    createCanvas(
+      width,
+      height
+    );
+
+  const ctx =
+    canvas.getContext('2d');
+
+  /*
+   * =============================
    * BACKGROUND
-   * ============================
+   * =============================
    */
 
-  const bg = ctx.createLinearGradient(
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
+  const bg =
+    ctx.createLinearGradient(
+      0,
+      0,
+      width,
+      height
+    );
 
   bg.addColorStop(
     0,
-    '#111522'
+    '#101522'
+  );
+
+  bg.addColorStop(
+    0.55,
+    '#141829'
   );
 
   bg.addColorStop(
     1,
-    '#181b2d'
+    '#181a2d'
   );
 
   ctx.fillStyle = bg;
@@ -542,69 +905,111 @@ async function renderRoomCard({
   ctx.fillRect(
     0,
     0,
-    canvas.width,
-    canvas.height
+    width,
+    height
   );
 
   /*
-   * Viền ngoài.
+   * Viền card ngoài.
    */
-  ctx.strokeStyle = '#343b67';
+  ctx.strokeStyle = '#313963';
   ctx.lineWidth = 2;
 
   ctx.strokeRect(
-    10,
-    10,
-    canvas.width - 20,
-    canvas.height - 20
+    9,
+    9,
+    width - 18,
+    height - 18
+  );
+
+  ctx.strokeStyle =
+    'rgba(111, 128, 255, 0.18)';
+
+  ctx.lineWidth = 1;
+
+  ctx.strokeRect(
+    14,
+    14,
+    width - 28,
+    height - 28
   );
 
   /*
-   * ============================
+   * =============================
    * AVATAR OWNER
-   * ============================
+   * =============================
    */
 
-  const image = await loadImage(
-    avatarUrl
-  );
+  let avatar;
 
-  const cx = canvas.width / 2;
+  try {
+    avatar =
+      await loadImage(
+        avatarUrl
+      );
+  } catch (error) {
+    console.error(
+      '[VoiceHDK] Không tải được avatar owner:',
+      error
+    );
+
+    return null;
+  }
+
+  const cx =
+    width / 2;
+
   const cy = 126;
-  const radius = 72;
+
+  const radius = 76;
 
   /*
    * Glow xanh/tím cố định.
    *
-   * Không cập nhật theo speaking để tránh spam
-   * Discord API và render ảnh liên tục.
+   * Không đổi theo speaking để tránh render/edit
+   * message liên tục.
    */
-  for (
-    let i = 18;
-    i >= 2;
-    i -= 4
-  ) {
-    ctx.beginPath();
-
-    ctx.arc(
+  const glow =
+    ctx.createRadialGradient(
       cx,
       cy,
-      radius + 8,
-      0,
-      Math.PI * 2
+      radius,
+      cx,
+      cy,
+      radius + 26
     );
 
-    ctx.strokeStyle =
-      `rgba(112, 132, 255, ${
-        0.035 + (18 - i) * 0.004
-      })`;
+  glow.addColorStop(
+    0,
+    'rgba(108, 136, 255, 0.34)'
+  );
 
-    ctx.lineWidth = i;
-    ctx.stroke();
-  }
+  glow.addColorStop(
+    0.55,
+    'rgba(124, 112, 255, 0.16)'
+  );
+
+  glow.addColorStop(
+    1,
+    'rgba(159, 103, 255, 0)'
+  );
+
+  ctx.fillStyle = glow;
+
+  ctx.beginPath();
+
+  ctx.arc(
+    cx,
+    cy,
+    radius + 28,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fill();
 
   /*
-   * Vòng gradient xanh/tím.
+   * Vòng gradient.
    */
   const ring =
     ctx.createLinearGradient(
@@ -616,12 +1021,17 @@ async function renderRoomCard({
 
   ring.addColorStop(
     0,
-    '#6ea8ff'
+    '#63a7ff'
+  );
+
+  ring.addColorStop(
+    0.5,
+    '#7183ff'
   );
 
   ring.addColorStop(
     1,
-    '#a879ff'
+    '#b06cff'
   );
 
   ctx.beginPath();
@@ -635,7 +1045,24 @@ async function renderRoomCard({
   );
 
   ctx.strokeStyle = ring;
-  ctx.lineWidth = 6;
+  ctx.lineWidth = 7;
+  ctx.stroke();
+
+  /*
+   * Viền tối giữa avatar và glow.
+   */
+  ctx.beginPath();
+
+  ctx.arc(
+    cx,
+    cy,
+    radius + 1,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.strokeStyle = '#0d1220';
+  ctx.lineWidth = 5;
   ctx.stroke();
 
   /*
@@ -656,7 +1083,7 @@ async function renderRoomCard({
   ctx.clip();
 
   ctx.drawImage(
-    image,
+    avatar,
     cx - radius,
     cy - radius,
     radius * 2,
@@ -666,55 +1093,29 @@ async function renderRoomCard({
   ctx.restore();
 
   /*
-   * ============================
-   * TÊN PHÒNG
-   * ============================
+   * =============================
+   * KHUNG TRÊN + TÊN PHÒNG
+   * =============================
    */
-
-  let displayRoomName =
-    String(
-      roomName ||
-      `PHÒNG CỦA ${ownerName}`
-    )
-      .trim()
-      .toUpperCase();
-
-  /*
-   * Nếu code cũ đã truyền emoji loa trong roomName,
-   * bỏ nó đi để không bị □.
-   */
-  displayRoomName =
-    displayRoomName
-      .replace(/🔊/gu, '')
-      .trim();
 
   drawCenteredDecoratedLine(
     ctx,
-    255,
-    displayRoomName,
-    canvas.width,
-    '╭',
-    '╮',
+    250,
+    safeRoomName,
+    width,
     {
       icon: 'speaker',
-      startSize: 28,
-      minSize: 17
+      top: true,
+      startSize: 34,
+      minSize: 21
     }
   );
 
   /*
-   * ============================
+   * =============================
    * THÔNG TIN PHÒNG
-   * ============================
+   * =============================
    */
-
-  const safeOwnerName =
-    String(
-      ownerName ||
-      owner.displayName ||
-      owner.user.username ||
-      'Owner'
-    );
 
   const rows = [
     {
@@ -726,34 +1127,37 @@ async function renderRoomCard({
     {
       icon: 'members',
       label: 'Thành viên',
-      value: `${memberCount} / ${limit}`
+      value:
+        `${Number(memberCount) || 0} / ${safeLimit}`
     },
 
     {
       icon: 'lock',
       label: 'Phòng',
-      value: locked
-        ? 'Đang khóa'
-        : 'Đang mở'
+      value:
+        locked
+          ? 'Đang khóa'
+          : 'Đang mở'
     },
 
     {
       icon: 'eye',
       label: 'Hiển thị',
-      value: hidden
-        ? 'Đang ẩn'
-        : 'Công khai'
+      value:
+        hidden
+          ? 'Đang ẩn'
+          : 'Công khai'
     },
 
     {
       icon: 'globe',
       label: 'Khu vực',
       value:
-        String(region || 'Tự động')
+        safeRegion || 'Tự động'
     }
   ];
 
-  let y = 326;
+  let y = 320;
 
   for (const row of rows) {
     drawInfoRow(
@@ -764,50 +1168,31 @@ async function renderRoomCard({
       }
     );
 
-    y += 58;
+    y += 61;
   }
 
   /*
-   * ============================
-   * TÊN SERVER / CHỮ KÝ
-   * ============================
+   * =============================
+   * KHUNG DƯỚI + TÊN SERVER
+   * =============================
    */
-
-  let safeSignature =
-    String(
-      signature ||
-      'VoiceHDK Bot'
-    ).trim();
-
-  /*
-   * Loại emoji Unicode phổ biến có thể gây ô vuông
-   * trong renderer Linux.
-   *
-   * Không ảnh hưởng emoji của Discord button.
-   */
-  safeSignature =
-    safeSignature
-      .replace(/🦖/gu, '')
-      .replace(/🔊/gu, '')
-      .trim();
 
   drawCenteredDecoratedLine(
     ctx,
-    625,
+    635,
     safeSignature,
-    canvas.width,
-    '╰',
-    '╯',
+    width,
     {
-      startSize: 28,
-      minSize: 17
+      top: false,
+      startSize: 32,
+      minSize: 20
     }
   );
 
   /*
-   * ============================
-   * OUTPUT + CACHE
-   * ============================
+   * =============================
+   * OUTPUT
+   * =============================
    */
 
   const buffer =
@@ -816,10 +1201,12 @@ async function renderRoomCard({
     );
 
   /*
-   * Giới hạn cache để bot chạy lâu
-   * không tăng RAM vô hạn.
+   * Cache có giới hạn.
+   *
+   * Tránh bot chạy lâu rồi giữ vô hạn ảnh panel
+   * trong RAM.
    */
-  if (cache.size >= 24) {
+  if (cache.size >= 32) {
     cache.clear();
   }
 
@@ -832,15 +1219,19 @@ async function renderRoomCard({
 }
 
 /**
- * Giữ tương thích với code cũ nếu index.js
- * vẫn import renderOwnerAvatarCard().
+ * Giữ tương thích với index.js cũ nếu vẫn gọi
+ * renderOwnerAvatarCard().
  */
 async function renderOwnerAvatarCard(
   owner
 ) {
+  if (!owner?.user) {
+    return null;
+  }
+
   const name =
-    owner?.displayName ||
-    owner?.user?.username ||
+    owner.displayName ||
+    owner.user.username ||
     'Owner';
 
   return renderRoomCard({
