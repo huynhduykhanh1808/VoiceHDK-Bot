@@ -12,6 +12,11 @@ for (const id of ['room_lock','room_hide','room_rename','room_limit','room_reset
 }
 assert(src.indexOf("mk('room_kick'") < src.indexOf("mk('room_deny'"), 'kick must appear before ban');
 assert(src.includes('control_aux_message_id'), 'second panel message persistence missing');
+assert(src.includes('new ContainerBuilder()'), 'Message 2 must use Components V2 ordering');
+assert(src.indexOf('.addActionRowComponents(regionRow)') < src.indexOf('.addActionRowComponents(memberRow)'), 'region select must appear before member select');
+assert(src.indexOf('.addActionRowComponents(memberRow)') < src.indexOf('.addTextDisplayComponents(trustedDisplay)'), 'trusted list must appear after selects');
+assert(src.indexOf(".setImage('attachment://owner-avatar.png')") < src.indexOf('embeds.push(infoEmbed)'), 'owner avatar must appear before room info');
+
 assert(src.includes('room_trusted_members'), 'trusted member persistence missing');
 assert(src.includes('orderedPresence'), 'trusted owner succession priority missing');
 assert(src.includes("'suapanel'"));
