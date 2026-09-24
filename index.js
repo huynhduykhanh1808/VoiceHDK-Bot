@@ -4630,79 +4630,85 @@ async function buildRoomPanelPayload(
   return { ...dashboard, components: buildRoomButtons(channel) };
 }
 
-async function buildRoomAuxPayload(channel, room) {
-  const regionRow = await buildRegionSelectRow(channel);
-  const memberRow = buildMemberSelectRow();
-  const container = new ContainerBuilder()
-    .setAccentColor(0x8899E8)
-    .addActionRowComponents(regionRow)
-    .addActionRowComponents(memberRow);
-
-  return {
-    components: [container],
-    flags: MessageFlags.IsComponentsV2,
-    allowedMentions: { parse: [] }
-  };
+function buildTrustedMemberRow(member) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`room_trusted_name:${member.id}`)
+      .setLabel(safeMemberName(member).slice(0, 80) || member.id)
+      .setEmoji('❤️')
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(true),
+    new ButtonBuilder()
+      .setCustomId(`room_untrust_member:${member.id}`)
+      .setEmoji('❌')
+      .setStyle(ButtonStyle.Danger)
+  );
 }
 
-async function buildRoomTrustedPayloads(channel) {
+async function getTrustedGuildMembers(channel) {
   const trusted = await getTrustedMembers(channel.id);
   const members = [];
   for (const row of trusted) {
     const member = await getGuildMember(channel.guild, String(row.member_id));
     if (member) members.push(member);
   }
+  return members;
+}
 
-  const pageSize = 5;
-  const pages = [];
-  const pageCount = Math.max(1, Math.ceil(members.length / pageSize));
+async function buildRoomAuxPayloads(channel, room) {
+  const members = await getTrustedGuildMembers(channel);
+  const regionRow = await buildRegionSelectRow(channel);
+  const memberRow = buildMemberSelectRow();
+  const firstPageSize = 3;
+  const continuationPageSize = 5;
+  const firstMembers = members.slice(0, firstPageSize);
+  const container = new ContainerBuilder()
+    .setAccentColor(0x8899E8)
+    .addActionRowComponents(regionRow)
+    .addActionRowComponents(memberRow)
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent('### ・❥・❤️ NGƯỜI TIN CẬY ❤️・❥・')
+    );
 
-  for (let page = 0; page < pageCount; page += 1) {
-    const shown = members.slice(page * pageSize, page * pageSize + pageSize);
-    const title = page === 0
-      ? '### ・❥・ ❤️ NGƯỜI TIN CẬY ・❥・'
-      : `### ・❥・ ❤️ NGƯỜI TIN CẬY · ${page + 1} ・❥・`;
-    const subtitle = page === 0
-      ? `-# Những thành viên được chủ phòng tin cậy · ${members.length} người`
-      : `-# Tiếp nối danh sách · ${members.length} người`;
-    const container = new ContainerBuilder()
+  if (!firstMembers.length) {
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent('Chưa có thành viên Tin cậy.')
+    );
+  } else {
+    for (const member of firstMembers) {
+      container.addActionRowComponents(buildTrustedMemberRow(member));
+    }
+  }
+
+  const payloads = [{
+    components: [container],
+    flags: MessageFlags.IsComponentsV2,
+    allowedMentions: { parse: [] }
+  }];
+
+  const remaining = members.slice(firstPageSize);
+  for (let offset = 0; offset < remaining.length; offset += continuationPageSize) {
+    const pageMembers = remaining.slice(offset, offset + continuationPageSize);
+    const continuation = new ContainerBuilder()
       .setAccentColor(0x8899E8)
       .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(`${title}\n${subtitle}`)
+        new TextDisplayBuilder().setContent('### ・❥・❤️ NGƯỜI TIN CẬY ❤️・❥・')
       );
-
-    if (!shown.length) {
-      container.addTextDisplayComponents(
-        new TextDisplayBuilder().setContent('-# Chưa có thành viên nào trong danh sách Tin cậy.')
-      );
-    } else {
-      for (const member of shown) {
-        container.addActionRowComponents(
-          new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-              .setCustomId(`room_trusted_name:${member.id}`)
-              .setLabel(safeMemberName(member).slice(0, 80) || member.id)
-              .setEmoji('❤️')
-              .setStyle(ButtonStyle.Primary)
-              .setDisabled(true),
-            new ButtonBuilder()
-              .setCustomId(`room_untrust_member:${member.id}`)
-              .setLabel('XÓA')
-              .setEmoji('❌')
-              .setStyle(ButtonStyle.Danger)
-          )
-        );
-      }
+    for (const member of pageMembers) {
+      continuation.addActionRowComponents(buildTrustedMemberRow(member));
     }
-
-    pages.push({
-      components: [container],
+    payloads.push({
+      components: [continuation],
       flags: MessageFlags.IsComponentsV2,
       allowedMentions: { parse: [] }
     });
   }
 
-  return pages;
+  return payloads;
+}
+
+async function buildRoomAuxPayload(channel, room) {
+  return (await buildRoomAuxPayloads(channel, room))[0];
 }
 
 function isRoomPanelMessage(
@@ -4778,58 +4784,22 @@ async function findRoomAuxMessages(channel) {
   }
 }
 
-function isRoomTrustedMessage(message) {
+function isRoomTrustedContinuationMessage(message) {
   if (!message || message.author?.id !== client.user?.id) return false;
   const ids = collectComponentCustomIds(message.components || []);
-  if (ids.some(id => id.startsWith('room_untrust_member:'))) return true;
-  try {
-    return JSON.stringify(message.components || []).includes('NGƯỜI TIN CẬY');
-  } catch {
-    return false;
-  }
+  return !ids.includes('room_region') && ids.some(id => id.startsWith('room_untrust_member:'));
 }
 
-async function findRoomTrustedMessages(channel) {
+async function findRoomTrustedContinuationMessages(channel) {
   if (!channel?.messages) return [];
   try {
-    const messages = await channel.messages.fetch({ limit: 100 });
+    const messages = await channel.messages.fetch({ limit: 50 });
     return Array.from(messages.values())
-      .filter(isRoomTrustedMessage)
+      .filter(isRoomTrustedContinuationMessage)
       .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
   } catch (error) {
-    logError(`FIND_TRUSTED_PANEL:${channel.id}`, error);
+    logError(`FIND_TRUSTED_CONTINUATIONS:${channel.id}`, error);
     return [];
-  }
-}
-
-async function syncRoomTrustedMessages(channel, { forceRebuild = false } = {}) {
-  const payloads = await buildRoomTrustedPayloads(channel);
-  let messages = await findRoomTrustedMessages(channel);
-
-  if (forceRebuild && messages.length) {
-    for (const message of messages) {
-      try { await message.delete(); } catch {}
-    }
-    messages = [];
-  }
-
-  for (let index = 0; index < payloads.length; index += 1) {
-    const payload = payloads[index];
-    const message = messages[index];
-    if (!message) {
-      await channel.send(payload);
-      continue;
-    }
-    try {
-      await message.edit(payload);
-    } catch {
-      try { await message.delete(); } catch {}
-      await channel.send(payload);
-    }
-  }
-
-  for (let index = payloads.length; index < messages.length; index += 1) {
-    try { await messages[index].delete(); } catch {}
   }
 }
 
@@ -5022,16 +4992,24 @@ async function refreshRoomPanelSafe(
         panelMessage.id
       );
 
-      const auxPayload = await buildRoomAuxPayload(channel, room);
+      const auxPayloads = await buildRoomAuxPayloads(channel, room);
+      const auxPayload = auxPayloads[0];
       let auxMessage = null;
       if (!forceRebuild && room.control_aux_message_id) {
         auxMessage = await fetchMessageSafe(channel, String(room.control_aux_message_id));
         if (auxMessage && !isRoomAuxMessage(auxMessage)) auxMessage = null;
       }
       const discoveredAux = await findRoomAuxMessages(channel);
-      if (forceRebuild && auxMessage) {
-        try { await auxMessage.delete(); } catch {}
-        auxMessage = null;
+      let continuationMessages = await findRoomTrustedContinuationMessages(channel);
+      if (forceRebuild) {
+        if (auxMessage) {
+          try { await auxMessage.delete(); } catch {}
+          auxMessage = null;
+        }
+        for (const message of continuationMessages) {
+          try { await message.delete(); } catch {}
+        }
+        continuationMessages = [];
       }
       if (!auxMessage && !forceRebuild && discoveredAux.length) auxMessage = discoveredAux[0];
       if (!auxMessage) auxMessage = await channel.send(auxPayload);
@@ -5042,7 +5020,21 @@ async function refreshRoomPanelSafe(
       await setControlAuxMessage(channel.id, auxMessage.id);
       const allAux = await findRoomAuxMessages(channel);
       await deleteDuplicatePanels(allAux, auxMessage.id);
-      await syncRoomTrustedMessages(channel, { forceRebuild });
+
+      const continuationPayloads = auxPayloads.slice(1);
+      for (let i = 0; i < continuationPayloads.length; i += 1) {
+        const payload = continuationPayloads[i];
+        const existing = continuationMessages[i];
+        if (existing) {
+          try { await existing.edit(payload); }
+          catch { continuationMessages[i] = await channel.send(payload); }
+        } else {
+          continuationMessages[i] = await channel.send(payload);
+        }
+      }
+      for (let i = continuationPayloads.length; i < continuationMessages.length; i += 1) {
+        try { await continuationMessages[i].delete(); } catch {}
+      }
 
       const allPanels =
         await findRoomPanelMessages(
@@ -11951,6 +11943,7 @@ async function routeButtonInteraction(
     await handleRoomUntrustMember(interaction, interaction.customId.split(':')[1]);
     return;
   }
+
 
   switch (
     interaction.customId
