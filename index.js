@@ -4681,12 +4681,12 @@ async function buildRoomTrustedPayloads(channel) {
     const container = new ContainerBuilder()
       .setAccentColor(0xA7B8FF)
       .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent('## ・❥・❤️ NGƯỜI TIN CẬY ❤️・❥・')
+        new TextDisplayBuilder().setContent(`### ・❥・ ❤️ NGƯỜI TIN CẬY ・❥・\n-# Những thành viên được chủ phòng tin cậy · ${members.length} người`)
       );
 
     if (!pageMembers.length) {
       container.addTextDisplayComponents(
-        new TextDisplayBuilder().setContent('**Chưa có thành viên Tin cậy.**')
+        new TextDisplayBuilder().setContent('-# Chưa có thành viên nào trong danh sách Tin cậy.')
       );
     } else {
       for (const member of pageMembers) {
@@ -4784,7 +4784,13 @@ async function findRoomAuxMessages(channel) {
 function isRoomTrustedContinuationMessage(message) {
   if (!message || message.author?.id !== client.user?.id) return false;
   const ids = collectComponentCustomIds(message.components || []);
-  return !ids.includes('room_region') && ids.some(id => id.startsWith('room_untrust_member:'));
+  if (ids.includes('room_region')) return false;
+  if (ids.some(id => id.startsWith('room_untrust_member:'))) return true;
+  try {
+    return JSON.stringify(message.components || []).includes('NGƯỜI TIN CẬY');
+  } catch {
+    return false;
+  }
 }
 
 async function findRoomTrustedContinuationMessages(channel) {
