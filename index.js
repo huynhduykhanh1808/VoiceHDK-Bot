@@ -29,7 +29,7 @@ const {
 
 const { Pool } = require('pg');
 const http = require('http');
-const { renderOwnerAvatarCard } = require('./panel/avatarCard');
+const { renderRoomCard } = require('./panel/avatarCard');
 const { normalVoiceAccess, normalVoiceFlags } = require('./services/voicePermissions');
 
 const BOT_NAME = 'VoiceHDK Bot';
@@ -4396,103 +4396,64 @@ async function buildRoomDashboard(
   owner,
   generator
 ) {
-  const state =
-    getRoomState(
-      channel
-    );
+  const state = getRoomState(channel);
+  const humans = humanMembers(channel);
+  const ownerName = owner ? safeMemberName(owner) : 'Không xác định';
+  const displayName = cleanDisplayName(generator?.display_name) || 'VoiceHDK Bot';
+  const limit = channel.userLimit > 0 ? channel.userLimit : '∞';
+  const region = channel.rtcRegion ? channel.rtcRegion : 'Tự động';
+  const roomName = channel.name || `PHÒNG CỦA ${ownerName}`;
 
-  const humans =
-    humanMembers(
-      channel
-    );
-
-  const ownerName =
-    owner
-      ? safeMemberName(
-          owner
-        )
-      : 'Không xác định';
-
-  const displayName =
-    cleanDisplayName(
-      generator?.display_name
-    ) ||
-    'VoiceHDK Bot';
-
-  const limit =
-    channel.userLimit > 0
-      ? channel.userLimit
-      : '∞';
-
-  const region =
-    channel.rtcRegion
-      ? channel.rtcRegion
-      : 'Tự động';
-
-  const body = [
-    `🔊  PHÒNG CỦA ${ownerName.toUpperCase()}`,
-    '────────────────────────────',
-    `👑 Chủ phòng    @${ownerName}`,
-    `👥 Thành viên   ${humans.length} / ${limit}`,
-    `🔓 Phòng        ${
-      state.locked
-        ? 'Đang khóa'
-        : 'Đang mở'
-    }`,
-    `👁 Hiển thị     ${
-      state.hidden
-        ? 'Đang ẩn'
-        : 'Công khai'
-    }`,
-    `🌐 Khu vực      ${region}`,
-    '────────────────────────────',
-    displayName
-  ];
-
-  const infoEmbed =
-    new EmbedBuilder()
-      .setColor(0x8899E8)
-      .setDescription(body.join('\n'));
-
-  // Discord always renders a large embed image below that embed's text.
-  // Use a dedicated first embed for the owner card so Message 1 is ordered:
-  // avatar -> room information -> signature -> buttons.
-  const embeds = [];
   const payload = {
     content: '',
-    embeds,
+    embeds: [],
     allowedMentions: { parse: [] }
   };
 
   if (owner?.user) {
     try {
-      const avatarCard = await renderOwnerAvatarCard(owner);
-      if (avatarCard) {
+      const roomCard = await renderRoomCard({
+        owner,
+        ownerName,
+        memberCount: humans.length,
+        limit,
+        locked: state.locked,
+        hidden: state.hidden,
+        region,
+        roomName,
+        signature: displayName
+      });
+      if (roomCard) {
         payload.attachments = [];
-        payload.files = [new AttachmentBuilder(avatarCard, { name: 'owner-avatar.png' })];
-        embeds.push(
+        payload.files = [new AttachmentBuilder(roomCard, { name: 'room-panel.png' })];
+        payload.embeds.push(
           new EmbedBuilder()
             .setColor(0x8899E8)
-            .setImage('attachment://owner-avatar.png')
+            .setImage('attachment://room-panel.png')
         );
-      } else {
-        embeds.push(
-          new EmbedBuilder()
-            .setColor(0x8899E8)
-            .setImage(owner.user.displayAvatarURL({ extension: 'png', size: 256 }))
-        );
+        return payload;
       }
     } catch (error) {
-      logError(`OWNER_AVATAR:${channel.id}`, error);
-      embeds.push(
-        new EmbedBuilder()
-          .setColor(0x8899E8)
-          .setImage(owner.user.displayAvatarURL({ extension: 'png', size: 256 }))
-      );
+      logError(`ROOM_CARD:${channel.id}`, error);
     }
   }
 
-  embeds.push(infoEmbed);
+  // Safe fallback if image rendering is unavailable on the host.
+  payload.embeds.push(
+    new EmbedBuilder()
+      .setColor(0x8899E8)
+      .setDescription([
+        `🔊  ${roomName.toUpperCase()}`,
+        '────────────────────────────',
+        `👑 Chủ phòng    @${ownerName}`,
+        `👥 Thành viên   ${humans.length} / ${limit}`,
+        `🔓 Phòng        ${state.locked ? 'Đang khóa' : 'Đang mở'}`,
+        `👁 Hiển thị     ${state.hidden ? 'Đang ẩn' : 'Công khai'}`,
+        `🌐 Khu vực      ${region}`,
+        '────────────────────────────',
+        displayName
+      ].join('\n'))
+  );
   return payload;
 }
 
