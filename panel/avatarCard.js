@@ -3,6 +3,41 @@
 const cache = new Map();
 
 /* =========================================================
+ * THEME
+ * ======================================================= */
+
+const THEME = {
+  // Màu chính của toàn bộ card
+  blue: '#3D8DFF',
+  cyanBlue: '#58B8FF',
+  indigo: '#5965FF',
+  purple: '#8558FF',
+  violet: '#A83DFF',
+
+  // Text
+  text: '#F1F3FF',
+  textSoft: '#D8DDF4',
+  textMuted: '#AEB7D5',
+
+  // Giá trị
+  owner: '#A88AFF',
+  members: '#8495FF',
+  open: '#63C7FF',
+  locked: '#A96AFF',
+  public: '#789DFF',
+  hidden: '#A86CFF',
+  region: '#B080FF',
+
+  // Khung trang trí bên trong
+  frame: '#AAB8FF',
+
+  // Background
+  backgroundStart: '#101522',
+  backgroundMiddle: '#141829',
+  backgroundEnd: '#181A2D'
+};
+
+/* =========================================================
  * FONT
  * ======================================================= */
 
@@ -28,6 +63,7 @@ function fitFont(
   }
 
   ctx.font = `${weight} ${size}px sans-serif`;
+
   return size;
 }
 
@@ -45,10 +81,10 @@ function cleanCanvasText(text) {
     // Variation selectors
     .replace(/[\uFE0E\uFE0F]/gu, '')
 
-    // Zero-width characters
+    // Zero-width
     .replace(/[\u200B-\u200D\u2060\uFEFF]/gu, '')
 
-    // Unicode replacement character
+    // Replacement character
     .replace(/\uFFFD/gu, '')
 
     // Các ký tự ô vuông thường gặp
@@ -64,13 +100,64 @@ function cleanCanvasText(text) {
 }
 
 /* =========================================================
+ * GRADIENT TEXT
+ * ======================================================= */
+
+function createTextGradient(
+  ctx,
+  x1,
+  x2
+) {
+  const gradient =
+    ctx.createLinearGradient(
+      x1,
+      0,
+      x2,
+      0
+    );
+
+  gradient.addColorStop(
+    0,
+    THEME.blue
+  );
+
+  gradient.addColorStop(
+    0.38,
+    THEME.indigo
+  );
+
+  gradient.addColorStop(
+    0.72,
+    THEME.purple
+  );
+
+  gradient.addColorStop(
+    1,
+    THEME.violet
+  );
+
+  return gradient;
+}
+
+/* =========================================================
  * ICONS
  * ======================================================= */
 
-function drawIcon(ctx, type, x, y, size = 34) {
+function drawIcon(
+  ctx,
+  type,
+  x,
+  y,
+  size = 34
+) {
   ctx.save();
 
-  ctx.lineWidth = Math.max(2, size * 0.075);
+  ctx.lineWidth =
+    Math.max(
+      2,
+      size * 0.075
+    );
+
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
@@ -79,7 +166,30 @@ function drawIcon(ctx, type, x, y, size = 34) {
      * CROWN
      * ----------------------- */
     case 'crown': {
-      ctx.fillStyle = '#ffd766';
+      const gradient =
+        ctx.createLinearGradient(
+          x,
+          y,
+          x + size,
+          y + size
+        );
+
+      gradient.addColorStop(
+        0,
+        '#8FB4FF'
+      );
+
+      gradient.addColorStop(
+        0.5,
+        '#8A72FF'
+      );
+
+      gradient.addColorStop(
+        1,
+        '#B16CFF'
+      );
+
+      ctx.fillStyle = gradient;
 
       ctx.beginPath();
 
@@ -135,7 +245,25 @@ function drawIcon(ctx, type, x, y, size = 34) {
      * MEMBERS
      * ----------------------- */
     case 'members': {
-      ctx.fillStyle = '#9878ff';
+      const gradient =
+        ctx.createLinearGradient(
+          x,
+          y,
+          x + size,
+          y + size
+        );
+
+      gradient.addColorStop(
+        0,
+        '#6EA8FF'
+      );
+
+      gradient.addColorStop(
+        1,
+        '#9C70FF'
+      );
+
+      ctx.fillStyle = gradient;
 
       ctx.beginPath();
 
@@ -192,8 +320,26 @@ function drawIcon(ctx, type, x, y, size = 34) {
      * LOCK
      * ----------------------- */
     case 'lock': {
-      ctx.strokeStyle = '#ffd166';
-      ctx.fillStyle = '#ffd166';
+      const gradient =
+        ctx.createLinearGradient(
+          x,
+          y,
+          x + size,
+          y + size
+        );
+
+      gradient.addColorStop(
+        0,
+        '#62BFFF'
+      );
+
+      gradient.addColorStop(
+        1,
+        '#7D72FF'
+      );
+
+      ctx.strokeStyle = gradient;
+      ctx.fillStyle = gradient;
 
       ctx.beginPath();
 
@@ -221,7 +367,25 @@ function drawIcon(ctx, type, x, y, size = 34) {
      * EYE
      * ----------------------- */
     case 'eye': {
-      ctx.strokeStyle = '#dce2ff';
+      const gradient =
+        ctx.createLinearGradient(
+          x,
+          y,
+          x + size,
+          y
+        );
+
+      gradient.addColorStop(
+        0,
+        '#69B8FF'
+      );
+
+      gradient.addColorStop(
+        1,
+        '#8A76FF'
+      );
+
+      ctx.strokeStyle = gradient;
 
       ctx.beginPath();
 
@@ -250,7 +414,7 @@ function drawIcon(ctx, type, x, y, size = 34) {
 
       ctx.stroke();
 
-      ctx.fillStyle = '#dce2ff';
+      ctx.fillStyle = THEME.indigo;
 
       ctx.beginPath();
 
@@ -271,7 +435,25 @@ function drawIcon(ctx, type, x, y, size = 34) {
      * GLOBE
      * ----------------------- */
     case 'globe': {
-      ctx.strokeStyle = '#5ed0ff';
+      const gradient =
+        ctx.createLinearGradient(
+          x,
+          y,
+          x + size,
+          y + size
+        );
+
+      gradient.addColorStop(
+        0,
+        '#55C5FF'
+      );
+
+      gradient.addColorStop(
+        1,
+        '#8C70FF'
+      );
+
+      ctx.strokeStyle = gradient;
 
       ctx.beginPath();
 
@@ -366,7 +548,30 @@ function drawFrameCorner(
 
   ctx.save();
 
-  ctx.strokeStyle = '#aab8ff';
+  const gradient =
+    ctx.createLinearGradient(
+      40,
+      0,
+      720,
+      0
+    );
+
+  gradient.addColorStop(
+    0,
+    '#789FFF'
+  );
+
+  gradient.addColorStop(
+    0.5,
+    '#7C7AFF'
+  );
+
+  gradient.addColorStop(
+    1,
+    '#A36CFF'
+  );
+
+  ctx.strokeStyle = gradient;
   ctx.lineWidth = 2.2;
   ctx.lineCap = 'round';
 
@@ -374,8 +579,15 @@ function drawFrameCorner(
 
   if (top) {
     if (side === 'left') {
-      ctx.moveTo(x, y + corner);
-      ctx.lineTo(x, y + 4);
+      ctx.moveTo(
+        x,
+        y + corner
+      );
+
+      ctx.lineTo(
+        x,
+        y + 4
+      );
 
       ctx.quadraticCurveTo(
         x,
@@ -464,11 +676,7 @@ function drawFrameCorner(
 }
 
 /* =========================================================
- * DECORATED LINE
- *
- * ╭──── ✦ ✦ ✦ PHÒNG CỦA KHÁNH ✦ ✦ ✦ ────╮
- *
- * ╰──── ✦ ✦ ✦ SERVER ✦ ✦ ✦ ─────────────╯
+ * DECORATED TITLE / SIGNATURE
  * ======================================================= */
 
 function drawCenteredDecoratedLine(
@@ -486,8 +694,11 @@ function drawCenteredDecoratedLine(
 
   const margin = 40;
 
-  const leftEdge = margin;
-  const rightEdge = width - margin;
+  const leftEdge =
+    margin;
+
+  const rightEdge =
+    width - margin;
 
   const innerWidth =
     rightEdge - leftEdge;
@@ -511,10 +722,12 @@ function drawCenteredDecoratedLine(
     ctx.measureText(label).width;
 
   const textStartX =
-    width / 2 - textWidth / 2;
+    width / 2 -
+    textWidth / 2;
 
   const textEndX =
-    textStartX + textWidth;
+    textStartX +
+    textWidth;
 
   const gap = 16;
 
@@ -536,9 +749,38 @@ function drawCenteredDecoratedLine(
   const rightLineEnd =
     rightEdge - 12;
 
+  /* -------------------------
+   * Decorative lines
+   * ----------------------- */
+
+  const lineGradient =
+    ctx.createLinearGradient(
+      leftEdge,
+      0,
+      rightEdge,
+      0
+    );
+
+  lineGradient.addColorStop(
+    0,
+    '#5B9CFF'
+  );
+
+  lineGradient.addColorStop(
+    0.5,
+    '#6D6EFF'
+  );
+
+  lineGradient.addColorStop(
+    1,
+    '#A15BFF'
+  );
+
   ctx.save();
 
-  ctx.strokeStyle = '#aab8ff';
+  ctx.strokeStyle =
+    lineGradient;
+
   ctx.lineWidth = 2.2;
   ctx.lineCap = 'round';
 
@@ -565,7 +807,12 @@ function drawCenteredDecoratedLine(
   );
 
   ctx.stroke();
+
   ctx.restore();
+
+  /* -------------------------
+   * Corners
+   * ----------------------- */
 
   drawFrameCorner(
     ctx,
@@ -583,15 +830,34 @@ function drawCenteredDecoratedLine(
     top
   );
 
-  ctx.fillStyle = '#e2e6ff';
+  /* -------------------------
+   * Gradient text
+   * ----------------------- */
+
+  ctx.save();
+
+  ctx.fillStyle =
+    createTextGradient(
+      ctx,
+      textStartX,
+      textEndX
+    );
+
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
+
+  ctx.shadowColor =
+    'rgba(92, 91, 255, 0.25)';
+
+  ctx.shadowBlur = 5;
 
   ctx.fillText(
     label,
     textStartX,
     y
   );
+
+  ctx.restore();
 }
 
 /* =========================================================
@@ -604,6 +870,7 @@ function drawInfoRow(
     icon,
     label,
     value,
+    valueColor,
     y,
     iconX = 86,
     labelX = 136,
@@ -621,8 +888,15 @@ function drawInfoRow(
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
 
-  ctx.fillStyle = '#f1f3ff';
-  ctx.font = '700 30px sans-serif';
+  /* -------------------------
+   * Label
+   * ----------------------- */
+
+  ctx.fillStyle =
+    THEME.text;
+
+  ctx.font =
+    '700 30px sans-serif';
 
   ctx.fillText(
     String(label),
@@ -630,7 +904,13 @@ function drawInfoRow(
     y
   );
 
-  ctx.fillStyle = '#cbd1ed';
+  /* -------------------------
+   * Value
+   * ----------------------- */
+
+  ctx.fillStyle =
+    valueColor ||
+    THEME.textSoft;
 
   fitFont(
     ctx,
@@ -638,7 +918,7 @@ function drawInfoRow(
     300,
     30,
     20,
-    500
+    600
   );
 
   ctx.fillText(
@@ -705,14 +985,21 @@ async function renderRoomCard({
     );
 
   /*
-   * Bỏ emoji / ký hiệu trang trí ở đầu tên phòng.
-   * Tránh lỗi ô vuông □.
+   * Bỏ emoji / ký hiệu ở đầu tên phòng.
+   * Tránh ký tự ô vuông.
    */
-  safeRoomName = safeRoomName
-    .replace(/^[^\p{L}\p{N}]+/gu, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toUpperCase();
+  safeRoomName =
+    safeRoomName
+      .replace(
+        /^[^\p{L}\p{N}]+/gu,
+        ''
+      )
+      .replace(
+        /\s+/g,
+        ' '
+      )
+      .trim()
+      .toUpperCase();
 
   if (!safeRoomName) {
     safeRoomName =
@@ -801,17 +1088,17 @@ async function renderRoomCard({
 
   bg.addColorStop(
     0,
-    '#101522'
+    THEME.backgroundStart
   );
 
   bg.addColorStop(
     0.55,
-    '#141829'
+    THEME.backgroundMiddle
   );
 
   bg.addColorStop(
     1,
-    '#181a2d'
+    THEME.backgroundEnd
   );
 
   ctx.fillStyle = bg;
@@ -824,10 +1111,7 @@ async function renderRoomCard({
   );
 
   /* =====================================================
-   * 2 VIỀN BAO QUÁT TOÀN BỘ CARD
-   *
-   * VIỀN 1 = gradient xanh -> tím, rõ và dày.
-   * VIỀN 2 = gradient sáng hơn, mảnh hơn.
+   * OUTER BORDER GRADIENT
    * =================================================== */
 
   const outerBorder =
@@ -840,66 +1124,85 @@ async function renderRoomCard({
 
   outerBorder.addColorStop(
     0,
-    '#3d8dff'
+    THEME.blue
   );
 
   outerBorder.addColorStop(
     0.35,
-    '#526fff'
+    THEME.indigo
   );
 
   outerBorder.addColorStop(
-    0.68,
-    '#7755ff'
+    0.70,
+    THEME.purple
   );
 
   outerBorder.addColorStop(
     1,
-    '#a33dff'
+    THEME.violet
   );
 
-  /*
-   * Glow của viền ngoài.
-   */
+  /* =====================================================
+   * VIỀN NGOÀI - GLOW
+   *
+   * Bo góc nhẹ 14px.
+   * =================================================== */
+
   ctx.save();
 
-  ctx.strokeStyle = outerBorder;
+  ctx.strokeStyle =
+    outerBorder;
+
   ctx.lineWidth = 6;
 
   ctx.shadowColor =
-    'rgba(91, 91, 255, 0.60)';
+    'rgba(91, 91, 255, 0.55)';
 
   ctx.shadowBlur = 11;
 
-  ctx.strokeRect(
+  ctx.beginPath();
+
+  ctx.roundRect(
     8,
     8,
     width - 16,
-    height - 16
+    height - 16,
+    14
   );
+
+  ctx.stroke();
 
   ctx.restore();
 
-  /*
+  /* =====================================================
    * VIỀN NGOÀI CHÍNH
-   */
+   * =================================================== */
+
   ctx.save();
 
-  ctx.strokeStyle = outerBorder;
+  ctx.strokeStyle =
+    outerBorder;
+
   ctx.lineWidth = 4;
 
-  ctx.strokeRect(
+  ctx.beginPath();
+
+  ctx.roundRect(
     8,
     8,
     width - 16,
-    height - 16
+    height - 16,
+    14
   );
+
+  ctx.stroke();
 
   ctx.restore();
 
-  /*
+  /* =====================================================
    * VIỀN THỨ 2 PHÍA TRONG
-   */
+   * =================================================== */
+
   const innerBorder =
     ctx.createLinearGradient(
       0,
@@ -910,30 +1213,37 @@ async function renderRoomCard({
 
   innerBorder.addColorStop(
     0,
-    'rgba(92, 164, 255, 0.70)'
+    'rgba(91, 157, 255, 0.72)'
   );
 
   innerBorder.addColorStop(
-    0.50,
-    'rgba(110, 112, 255, 0.60)'
+    0.5,
+    'rgba(111, 111, 255, 0.60)'
   );
 
   innerBorder.addColorStop(
     1,
-    'rgba(180, 86, 255, 0.65)'
+    'rgba(174, 83, 255, 0.68)'
   );
 
   ctx.save();
 
-  ctx.strokeStyle = innerBorder;
+  ctx.strokeStyle =
+    innerBorder;
+
   ctx.lineWidth = 1.5;
 
-  ctx.strokeRect(
+  ctx.beginPath();
+
+  ctx.roundRect(
     15,
     15,
     width - 30,
-    height - 30
+    height - 30,
+    11
   );
+
+  ctx.stroke();
 
   ctx.restore();
 
@@ -965,7 +1275,7 @@ async function renderRoomCard({
   const radius = 76;
 
   /* =====================================================
-   * AVATAR GLOW
+   * AVATAR OUTER GLOW
    * =================================================== */
 
   const glow =
@@ -975,30 +1285,27 @@ async function renderRoomCard({
       radius,
       cx,
       cy,
-      radius + 30
+      radius + 34
     );
 
-  /*
-   * Đậm hơn bản cũ một chút.
-   */
   glow.addColorStop(
     0,
-    'rgba(72, 112, 255, 0.52)'
+    'rgba(62, 126, 255, 0.60)'
   );
 
   glow.addColorStop(
-    0.48,
-    'rgba(102, 79, 255, 0.28)'
+    0.40,
+    'rgba(85, 79, 255, 0.34)'
   );
 
   glow.addColorStop(
-    0.75,
-    'rgba(155, 63, 255, 0.14)'
+    0.70,
+    'rgba(154, 58, 255, 0.18)'
   );
 
   glow.addColorStop(
     1,
-    'rgba(155, 63, 255, 0)'
+    'rgba(154, 58, 255, 0)'
   );
 
   ctx.fillStyle = glow;
@@ -1008,7 +1315,7 @@ async function renderRoomCard({
   ctx.arc(
     cx,
     cy,
-    radius + 32,
+    radius + 34,
     0,
     Math.PI * 2
   );
@@ -1018,7 +1325,7 @@ async function renderRoomCard({
   /* =====================================================
    * AVATAR GRADIENT RING
    *
-   * Xanh/tím đậm hơn viền ngoài card.
+   * Avatar là điểm đậm nhất của card.
    * =================================================== */
 
   const ring =
@@ -1031,27 +1338,28 @@ async function renderRoomCard({
 
   ring.addColorStop(
     0,
-    '#2580ff'
+    '#2580FF'
   );
 
   ring.addColorStop(
-    0.45,
-    '#4c4dff'
+    0.42,
+    '#484DFF'
   );
 
   ring.addColorStop(
     0.72,
-    '#713dff'
+    '#733DFF'
   );
 
   ring.addColorStop(
     1,
-    '#a82fff'
+    '#AA2FFF'
   );
 
-  /*
-   * Glow vòng avatar.
-   */
+  /* -------------------------
+   * Glow vòng avatar
+   * ----------------------- */
+
   ctx.save();
 
   ctx.beginPath();
@@ -1066,24 +1374,21 @@ async function renderRoomCard({
 
   ctx.strokeStyle = ring;
 
-  /*
-   * Vòng avatar dày hơn bản cũ.
-   */
-  ctx.lineWidth = 9;
+  ctx.lineWidth = 10;
 
   ctx.shadowColor =
-    'rgba(91, 72, 255, 0.78)';
+    'rgba(89, 68, 255, 0.82)';
 
-  ctx.shadowBlur = 15;
+  ctx.shadowBlur = 16;
 
   ctx.stroke();
 
   ctx.restore();
 
-  /*
-   * Vẽ lại ring nét chính để không bị glow
-   * làm nhòe đường viền.
-   */
+  /* -------------------------
+   * Ring chính
+   * ----------------------- */
+
   ctx.save();
 
   ctx.beginPath();
@@ -1097,14 +1402,17 @@ async function renderRoomCard({
   );
 
   ctx.strokeStyle = ring;
+
   ctx.lineWidth = 7;
+
   ctx.stroke();
 
   ctx.restore();
 
-  /*
-   * Viền tối giữa avatar và vòng gradient.
-   */
+  /* -------------------------
+   * Viền tối sát avatar
+   * ----------------------- */
+
   ctx.beginPath();
 
   ctx.arc(
@@ -1115,8 +1423,11 @@ async function renderRoomCard({
     Math.PI * 2
   );
 
-  ctx.strokeStyle = '#0d1220';
+  ctx.strokeStyle =
+    '#0D1220';
+
   ctx.lineWidth = 5;
+
   ctx.stroke();
 
   /* =====================================================
@@ -1148,9 +1459,7 @@ async function renderRoomCard({
   ctx.restore();
 
   /* =====================================================
-   * TOP TITLE
-   *
-   * Không icon voice.
+   * TITLE
    *
    * ✦ ✦ ✦ PHÒNG CỦA KHÁNH ✦ ✦ ✦
    * =================================================== */
@@ -1175,14 +1484,16 @@ async function renderRoomCard({
     {
       icon: 'crown',
       label: 'Chủ phòng',
-      value: `@${safeOwnerName}`
+      value: `@${safeOwnerName}`,
+      valueColor: THEME.owner
     },
 
     {
       icon: 'members',
       label: 'Thành viên',
       value:
-        `${Number(memberCount) || 0} / ${safeLimit}`
+        `${Number(memberCount) || 0} / ${safeLimit}`,
+      valueColor: THEME.members
     },
 
     {
@@ -1191,7 +1502,12 @@ async function renderRoomCard({
       value:
         locked
           ? 'Đang khóa'
-          : 'Đang mở'
+          : 'Đang mở',
+
+      valueColor:
+        locked
+          ? THEME.locked
+          : THEME.open
     },
 
     {
@@ -1200,7 +1516,12 @@ async function renderRoomCard({
       value:
         hidden
           ? 'Đang ẩn'
-          : 'Công khai'
+          : 'Công khai',
+
+      valueColor:
+        hidden
+          ? THEME.hidden
+          : THEME.public
     },
 
     {
@@ -1208,7 +1529,10 @@ async function renderRoomCard({
       label: 'Khu vực',
       value:
         safeRegion ||
-        'Tự động'
+        'Tự động',
+
+      valueColor:
+        THEME.region
     }
   ];
 
@@ -1229,7 +1553,7 @@ async function renderRoomCard({
   /* =====================================================
    * BOTTOM SIGNATURE
    *
-   * ✦ ✦ ✦ SERVER NAME ✦ ✦ ✦
+   * ✦ ✦ ✦ Khủng Long Con ✦ ✦ ✦
    * =================================================== */
 
   drawCenteredDecoratedLine(
