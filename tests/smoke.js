@@ -14,12 +14,16 @@ assert(src.indexOf("mk('room_mute_toggle'") < src.indexOf("mk('room_kick'"), 'mu
 assert(src.indexOf("mk('room_kick'") < src.indexOf("mk('room_deny'"), 'kick must appear before ban');
 assert(!src.includes("mk('room_untrust'"), 'old untrust button must be removed');
 assert(src.includes("room_untrust_member:"), 'trusted remove button missing');
-assert(src.includes("room_trusted_page:"), 'trusted pagination missing');
+assert(!src.includes("room_trusted_page:"), 'trusted pagination buttons must be removed');
+assert(src.includes('buildRoomTrustedPayloads'), 'trusted multi-message builder missing');
+assert(src.includes('syncRoomTrustedMessages'), 'trusted multi-message sync missing');
 assert(src.includes("{ Speak: muted ? true : false }"), 'mute toggle must only edit Speak');
 assert(src.includes('control_aux_message_id'), 'second panel message persistence missing');
 assert(src.includes('new ContainerBuilder()'), 'Message 2 must use Components V2 ordering');
 assert(src.indexOf('.addActionRowComponents(regionRow)') < src.indexOf('.addActionRowComponents(memberRow)'), 'region select must appear before member select');
-assert(src.indexOf('.addActionRowComponents(memberRow)') < src.indexOf('### ❤️ Người Tin cậy'), 'trusted list must appear after selects');
+assert(src.includes("### ・❥・ ❤️ NGƯỜI TIN CẬY ・❥・"), 'trusted panel title missing');
+assert(src.includes('const pageSize = 5;'), 'trusted messages must split automatically');
+assert(!src.includes(".setLabel('TRƯỚC')") && !src.includes(".setLabel('SAU')"), 'trusted navigation buttons must not exist');
 assert(src.includes("new AttachmentBuilder(roomCard, { name: 'room-panel.png' })"), 'room card attachment missing');
 assert(src.includes(".setImage('attachment://room-panel.png')"), 'room card image missing');
 assert(src.includes('trustedCount,'), 'trusted count must be passed to room card');
