@@ -1,6 +1,50 @@
 'use strict';
 
+const fs = require('fs');
 const cache = new Map();
+
+const FONT_FAMILY = 'VoiceHDK Sans';
+const FONT_FALLBACK = '"DejaVu Sans", "Noto Sans", "Liberation Sans", sans-serif';
+let fontReady = false;
+
+function setupVietnameseFont(canvasLib) {
+  if (fontReady) return;
+
+  const { GlobalFonts } = canvasLib;
+
+  if (!GlobalFonts) {
+    fontReady = true;
+    return;
+  }
+
+  const regular = [
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+    '/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf',
+    '/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf'
+  ].find(fs.existsSync);
+
+  const bold = [
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+    '/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf',
+    '/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf'
+  ].find(fs.existsSync);
+
+  try {
+    if (regular) GlobalFonts.registerFromPath(regular, FONT_FAMILY);
+    if (bold) GlobalFonts.registerFromPath(bold, FONT_FAMILY);
+  } catch (error) {
+    console.warn(
+      '[VoiceHDK] Không đăng ký được font tiếng Việt:',
+      error?.message || error
+    );
+  }
+
+  fontReady = true;
+}
+
+function canvasFont(weight, size) {
+  return `${weight} ${size}px "${FONT_FAMILY}", ${FONT_FALLBACK}`;
+}
 
 const DESIGN_WIDTH = 760;
 const DESIGN_HEIGHT = 820;
@@ -39,7 +83,7 @@ function fitFont(
   let size = startSize;
 
   while (size > minSize) {
-    ctx.font = `${weight} ${size}px sans-serif`;
+    ctx.font = canvasFont(weight, size);
 
     if (ctx.measureText(value).width <= maxWidth) {
       break;
@@ -48,8 +92,7 @@ function fitFont(
     size--;
   }
 
-  ctx.font = `${weight} ${size}px sans-serif`;
-
+  ctx.font = canvasFont(weight, size);
   return size;
 }
 
@@ -124,7 +167,6 @@ function drawHeart(
   glow = 0
 ) {
   ctx.save();
-
   ctx.translate(x, y);
 
   if (flip) {
@@ -175,7 +217,6 @@ function drawTinyDiamond(
   fillStyle
 ) {
   ctx.save();
-
   ctx.fillStyle = fillStyle;
 
   ctx.beginPath();
@@ -480,7 +521,6 @@ function drawHeartbeatOrnament(
   ctx.lineWidth = 2;
 
   ctx.beginPath();
-
   ctx.moveTo(0, 9);
 
   ctx.bezierCurveTo(
@@ -502,7 +542,6 @@ function drawHeartbeatOrnament(
   );
 
   ctx.stroke();
-
   ctx.restore();
 }
 
@@ -575,7 +614,6 @@ function drawInwardLoveMark(
   );
 
   ctx.stroke();
-
   ctx.restore();
 }
 
@@ -623,12 +661,8 @@ function drawTitleWithLoveMarks(
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = gradient;
-
-  ctx.shadowColor =
-    'rgba(92, 91, 255, 0.22)';
-
-  ctx.shadowBlur =
-    footer ? 3 : 5;
+  ctx.shadowColor = 'rgba(92, 91, 255, 0.22)';
+  ctx.shadowBlur = footer ? 3 : 5;
 
   ctx.fillText(
     safe,
@@ -995,7 +1029,7 @@ function drawInfoRow(
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
   ctx.fillStyle = THEME.text;
-  ctx.font = '700 36px sans-serif';
+  ctx.font = canvasFont(700, 36);
 
   ctx.fillText(
     String(label),
@@ -1057,6 +1091,8 @@ async function renderRoomCard({
     createCanvas,
     loadImage
   } = canvasLib;
+
+  setupVietnameseFont(canvasLib);
 
   const safeOwnerName =
     cleanCanvasText(
