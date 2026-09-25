@@ -4631,9 +4631,7 @@ async function buildRoomPanelPayload(
 }
 
 function buildTrustedMemberRow(member) {
-  const rawName = safeMemberName(member).slice(0, 54) || member.id;
-  const spacerCount = Math.max(0, 54 - Array.from(rawName).length);
-  const displayName = `${rawName}${'⠀'.repeat(spacerCount)}`.slice(0, 80);
+  const displayName = safeMemberName(member).slice(0, 32) || member.id;
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`room_trusted_name:${member.id}`)
