@@ -53,6 +53,16 @@ assert(src.includes("'datlai'"));
 assert(src.includes("'theodoilog'"));
 assert(src.includes("'xoatheodoilog'"));
 assert(src.includes("'danhsachtheodoi'"));
+
+assert(src.includes("{ ownerOnly = false } = {}"), 'room context must support delegated trusted management');
+assert(src.includes("isTrusted = trusted.some"), 'trusted room manager authorization missing');
+assert(src.includes("actor,"), 'room context must retain the acting member');
+assert(src.includes("getOwnerRoomContext(interaction, { ownerOnly: true })"), 'owner-only trusted-list actions must remain protected');
+assert(src.includes("{ ownerOnly: true }"), 'ownership transfer must remain owner-only');
+assert(src.includes("context.actor.id"), 'member selection must be isolated per acting manager');
+assert(src.includes("if (context.isOwner)"), 'trusted manager must not silently remove another trusted member from trusted storage');
+assert(src.includes("channel.bulkDelete(recent, true)"), 'room cleanup should bulk-delete recent messages for responsiveness');
+
 console.log('VoiceHDK smoke tests: PASS');
 
 assert(src.includes("mk('room_rename', 'TÊN'"), 'room rename button must be Vietnamese TÊN');
