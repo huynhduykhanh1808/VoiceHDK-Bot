@@ -7,7 +7,7 @@ const perms = require('../services/voicePermissions');
 assert.deepStrictEqual(perms.normalVoiceAccess(), {
   ViewChannel: true, Connect: true, Speak: true, UseVAD: true, Stream: true
 });
-for (const id of ['room_lock','room_hide','room_limit','room_rename','room_reset','room_fix_panel','room_transfer','room_trust','room_invite','room_mute_toggle','room_kick','room_deny']) {
+for (const id of ['room_lock','room_hide','room_limit','room_rename','room_reset','room_fix_panel','room_clear_chat','room_transfer','room_trust','room_invite','room_mute_toggle','room_kick','room_deny']) {
   assert(src.includes(`'${id}'`), `missing button ${id}`);
 }
 assert(src.indexOf("mk('room_mute_toggle'") < src.indexOf("mk('room_kick'"), 'mute must appear before kick');
@@ -54,3 +54,12 @@ assert(src.includes("'theodoilog'"));
 assert(src.includes("'xoatheodoilog'"));
 assert(src.includes("'danhsachtheodoi'"));
 console.log('VoiceHDK smoke tests: PASS');
+
+assert(src.includes("mk('room_rename', 'TÊN'"), 'room rename button must be Vietnamese TÊN');
+assert(src.includes("setCustomId('room_clear_chat').setEmoji('🧹')"), 'compact broom button missing');
+assert(src.includes("case 'room_clear_chat':"), 'clear chat route missing');
+assert(src.includes('async function handleRoomClearChat'), 'clear chat handler missing');
+assert(src.includes('!message.author?.bot'), 'clear chat must preserve bot control messages');
+assert(src.includes('const safeContent = content.replace(/`/g'), 'chat log text must be backtick-safe');
+assert(src.includes('`${roomName}  @${authorName} : \\`${safeContent}\\`'), 'chat log must stay on one line with backtick content');
+assert(!src.includes('🔗 Liên kết:'), 'chat log must not duplicate links');
