@@ -23,7 +23,7 @@ assert(src.includes(".setLabel('‹')"), 'compact previous trusted page button m
 assert(src.includes(".setLabel('›')"), 'compact next trusted page button missing');
 assert(src.includes('const pageSize = 8;'), 'trusted page size must preserve one-member-per-row layout');
 assert(src.includes('findRoomTrustedContinuationMessages'), 'trusted continuation message sync missing');
-assert(src.includes("### ・❥・ ❤️ NGƯỜI TIN CẬY ・❥・"), 'compact trusted heading missing');
+assert(src.includes("### ・❥・ `❤️` NGƯỜI TIN CẬY `❤️` ・❥・"), 'compact trusted heading missing');
 assert(src.includes('Những thành viên được chủ phòng tin cậy · ${members.length} người'), 'trusted count subtitle missing');
 assert(src.includes("JSON.stringify(message.components || []).includes('NGƯỜI TIN CẬY')"), 'empty trusted panels must be discoverable for FIX cleanup');
 assert(src.includes(".setEmoji('❌')"), 'compact trusted remove button missing');
