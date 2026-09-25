@@ -56,10 +56,13 @@ assert(src.includes("'danhsachtheodoi'"));
 console.log('VoiceHDK smoke tests: PASS');
 
 assert(src.includes("mk('room_rename', 'TÊN'"), 'room rename button must be Vietnamese TÊN');
-assert(src.includes("setCustomId('room_clear_chat').setEmoji('🧹')"), 'compact broom button missing');
+assert(src.includes("mk('room_clear_chat', '', '🧹', ButtonStyle.Secondary)"), 'compact broom button missing');
 assert(src.includes("case 'room_clear_chat':"), 'clear chat route missing');
 assert(src.includes('async function handleRoomClearChat'), 'clear chat handler missing');
-assert(src.includes('!message.author?.bot'), 'clear chat must preserve bot control messages');
+assert(src.includes('isProtectedRoomControlMessage'), 'clear chat protected control-message guard missing');
+assert(src.includes('isRoomPanelMessage(message)'), 'clear chat must preserve main room panel');
+assert(src.includes('isRoomAuxMessage(message)'), 'clear chat must preserve room selectors');
+assert(src.includes('isRoomTrustedContinuationMessage(message)'), 'clear chat must preserve trusted panel');
 assert(src.includes('const safeContent = content.replace(/`/g'), 'chat log text must be backtick-safe');
 assert(src.includes('`${roomName}  @${authorName} : \\`${safeContent}\\`'), 'chat log must stay on one line with backtick content');
 assert(!src.includes('🔗 Liên kết:'), 'chat log must not duplicate links');
