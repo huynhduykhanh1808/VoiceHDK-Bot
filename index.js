@@ -4464,8 +4464,11 @@ function buildRoomButtons(
   channel
 ) {
   const state = getRoomState(channel);
-  const mk = (id, label, emoji, style) =>
-    new ButtonBuilder().setCustomId(id).setLabel(label).setEmoji(emoji).setStyle(style);
+  const mk = (id, label, emoji, style) => {
+    const button = new ButtonBuilder().setCustomId(id).setEmoji(emoji).setStyle(style);
+    if (label) button.setLabel(label);
+    return button;
+  };
 
   return [
     new ActionRowBuilder().addComponents(
@@ -4474,9 +4477,10 @@ function buildRoomButtons(
       mk('room_limit', 'GIỚI HẠN', '👥', ButtonStyle.Primary)
     ),
     new ActionRowBuilder().addComponents(
-      mk('room_rename', 'NAME', '✏️', ButtonStyle.Primary),
+      mk('room_rename', 'TÊN', '✏️', ButtonStyle.Primary),
       mk('room_reset', 'ĐẶT LẠI', '♻️', ButtonStyle.Success),
-      mk('room_fix_panel', 'FIX', '🔧', ButtonStyle.Primary)
+      mk('room_fix_panel', 'FIX', '🔧', ButtonStyle.Primary),
+      mk('room_clear_chat', '', '🧹', ButtonStyle.Secondary)
     ),
     new ActionRowBuilder().addComponents(
       mk('room_transfer', 'CHUYỂN CHỦ', '👑', ButtonStyle.Success),
@@ -4631,17 +4635,17 @@ async function buildRoomPanelPayload(
 }
 
 function buildTrustedMemberRow(member) {
+  const displayName = safeMemberName(member).slice(0, 32) || member.id;
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`room_trusted_name:${member.id}`)
-      .setLabel(safeMemberName(member).slice(0, 80) || member.id)
+      .setLabel(displayName)
       .setEmoji('❤️')
-      .setStyle(ButtonStyle.Success)
-      .setDisabled(true),
+      .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId(`room_untrust_member:${member.id}`)
       .setEmoji('❌')
-      .setStyle(ButtonStyle.Danger)
+      .setStyle(ButtonStyle.Secondary)
   );
 }
 
@@ -4656,55 +4660,66 @@ async function getTrustedGuildMembers(channel) {
 }
 
 async function buildRoomAuxPayloads(channel, room) {
-  const members = await getTrustedGuildMembers(channel);
   const regionRow = await buildRegionSelectRow(channel);
   const memberRow = buildMemberSelectRow();
-  const firstPageSize = 3;
-  const continuationPageSize = 5;
-  const firstMembers = members.slice(0, firstPageSize);
   const container = new ContainerBuilder()
     .setAccentColor(0x8899E8)
     .addActionRowComponents(regionRow)
-    .addActionRowComponents(memberRow)
-    .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent('### ・❥・❤️ NGƯỜI TIN CẬY ❤️・❥・')
-    );
+    .addActionRowComponents(memberRow);
 
-  if (!firstMembers.length) {
-    container.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent('Chưa có thành viên Tin cậy.')
-    );
-  } else {
-    for (const member of firstMembers) {
-      container.addActionRowComponents(buildTrustedMemberRow(member));
-    }
-  }
-
-  const payloads = [{
+  return [{
     components: [container],
     flags: MessageFlags.IsComponentsV2,
     allowedMentions: { parse: [] }
   }];
+}
 
-  const remaining = members.slice(firstPageSize);
-  for (let offset = 0; offset < remaining.length; offset += continuationPageSize) {
-    const pageMembers = remaining.slice(offset, offset + continuationPageSize);
-    const continuation = new ContainerBuilder()
-      .setAccentColor(0x8899E8)
-      .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent('### ・❥・❤️ NGƯỜI TIN CẬY ❤️・❥・')
-      );
+async function buildRoomTrustedPayloads(channel, requestedPage = 0) {
+  const members = await getTrustedGuildMembers(channel);
+  const pageSize = 8;
+  const pageCount = Math.max(1, Math.ceil(members.length / pageSize));
+  const page = Math.max(0, Math.min(Number(requestedPage) || 0, pageCount - 1));
+  const pageMembers = members.slice(page * pageSize, (page + 1) * pageSize);
+  const container = new ContainerBuilder()
+    .setAccentColor(0xA7B8FF)
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        `### ・❥・ ❤ NGƯỜI TIN CẬY ❤ ・❥・\n-# Những thành viên được chủ phòng tin cậy · ${members.length} người${pageCount > 1 ? ` · Trang ${page + 1}/${pageCount}` : ''}`
+      )
+    );
+
+  if (!pageMembers.length) {
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent('-# Chưa có thành viên nào trong danh sách Tin cậy.')
+    );
+  } else {
     for (const member of pageMembers) {
-      continuation.addActionRowComponents(buildTrustedMemberRow(member));
+      container.addActionRowComponents(buildTrustedMemberRow(member));
     }
-    payloads.push({
-      components: [continuation],
-      flags: MessageFlags.IsComponentsV2,
-      allowedMentions: { parse: [] }
-    });
   }
 
-  return payloads;
+  if (pageCount > 1) {
+    container.addActionRowComponents(
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`room_trusted_page:${page - 1}`)
+          .setLabel('‹')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(page === 0),
+        new ButtonBuilder()
+          .setCustomId(`room_trusted_page:${page + 1}`)
+          .setLabel('›')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(page === pageCount - 1)
+      )
+    );
+  }
+
+  return [{
+    components: [container],
+    flags: MessageFlags.IsComponentsV2,
+    allowedMentions: { parse: [] }
+  }];
 }
 
 async function buildRoomAuxPayload(channel, room) {
@@ -4787,7 +4802,13 @@ async function findRoomAuxMessages(channel) {
 function isRoomTrustedContinuationMessage(message) {
   if (!message || message.author?.id !== client.user?.id) return false;
   const ids = collectComponentCustomIds(message.components || []);
-  return !ids.includes('room_region') && ids.some(id => id.startsWith('room_untrust_member:'));
+  if (ids.includes('room_region')) return false;
+  if (ids.some(id => id.startsWith('room_untrust_member:'))) return true;
+  try {
+    return JSON.stringify(message.components || []).includes('NGƯỜI TIN CẬY');
+  } catch {
+    return false;
+  }
 }
 
 async function findRoomTrustedContinuationMessages(channel) {
@@ -5021,18 +5042,18 @@ async function refreshRoomPanelSafe(
       const allAux = await findRoomAuxMessages(channel);
       await deleteDuplicatePanels(allAux, auxMessage.id);
 
-      const continuationPayloads = auxPayloads.slice(1);
-      for (let i = 0; i < continuationPayloads.length; i += 1) {
-        const payload = continuationPayloads[i];
+      const trustedPayloads = await buildRoomTrustedPayloads(channel);
+      for (let i = 0; i < trustedPayloads.length; i += 1) {
+        const trustedPayload = trustedPayloads[i];
         const existing = continuationMessages[i];
         if (existing) {
-          try { await existing.edit(payload); }
-          catch { continuationMessages[i] = await channel.send(payload); }
+          try { await existing.edit(trustedPayload); }
+          catch { continuationMessages[i] = await channel.send(trustedPayload); }
         } else {
-          continuationMessages[i] = await channel.send(payload);
+          continuationMessages[i] = await channel.send(trustedPayload);
         }
       }
-      for (let i = continuationPayloads.length; i < continuationMessages.length; i += 1) {
+      for (let i = trustedPayloads.length; i < continuationMessages.length; i += 1) {
         try { await continuationMessages[i].delete(); } catch {}
       }
 
@@ -6184,6 +6205,58 @@ async function handleRoomMemberSelect(
     member.id
   );
 }
+function isProtectedRoomControlMessage(message) {
+  return (
+    isRoomPanelMessage(message) ||
+    isRoomAuxMessage(message) ||
+    isRoomTrustedContinuationMessage(message)
+  );
+}
+
+async function handleRoomClearChat(interaction) {
+  await safeDeferUpdate(interaction);
+
+  const context = await getOwnerRoomContext(interaction);
+  if (!context.ok) {
+    await tempFollowUp(interaction, context.message, { error: true });
+    return;
+  }
+
+  const channel = context.channel;
+  if (!channel?.messages?.fetch) {
+    await tempFollowUp(interaction, '❌ Không thể truy cập Room Chat của phòng này.', { error: true });
+    return;
+  }
+
+  let deleted = 0;
+  let before;
+
+  try {
+    while (true) {
+      const batch = await channel.messages.fetch({ limit: 100, ...(before ? { before } : {}) });
+      if (!batch.size) break;
+
+      const removable = batch.filter(message => !isProtectedRoomControlMessage(message));
+      for (const message of removable.values()) {
+        try {
+          await message.delete();
+          deleted += 1;
+        } catch (error) {
+          logError(`ROOM_CLEAR_CHAT_DELETE:${channel.id}:${message.id}`, error);
+        }
+      }
+
+      before = batch.last()?.id;
+      if (batch.size < 100 || !before) break;
+    }
+
+    await tempFollowUp(interaction, `🧹 Đã dọn ${deleted} tin nhắn trong Room Chat của phòng này.`);
+  } catch (error) {
+    logError(`ROOM_CLEAR_CHAT:${channel.id}`, error);
+    await tempFollowUp(interaction, '❌ Không thể dọn Room Chat lúc này.', { error: true });
+  }
+}
+
 async function handleRoomLock(
   interaction
 ) {
@@ -8901,11 +8974,6 @@ async function archiveAttachments(
 
       const archivedMessage =
         await logChannel.send({
-          content:
-            `📦 Bản lưu tệp từ <#${sourceMessage.channelId}> • ${vietnamTime(
-              sourceMessage.createdAt ||
-              new Date()
-            )}`,
           files: [
             {
               attachment:
@@ -8964,146 +9032,29 @@ function messageAuthorName(
   );
 }
 
-async function sendChatCreateLog(
-  message
-) {
-  if (
-    !message ||
-    !message.guild ||
-    message.author?.bot
-  ) {
-    return;
-  }
-
+async function sendChatCreateLog(message) {
+  if (!message || !message.guild || message.author?.bot) return;
   if (!(await shouldTrackChatChannel(message.guild.id, message.channelId))) return;
 
-  const logChannel =
-    await getChatLogChannel(
-      message.guild
-    );
+  const logChannel = await getChatLogChannel(message.guild);
+  if (!logChannel || message.channelId === logChannel.id) return;
 
-  if (!logChannel) {
-    return;
-  }
-
-  if (
-    message.channelId ===
-    logChannel.id
-  ) {
-    return;
-  }
-
-  const authorName =
-    messageAuthorName(
-      message
-    );
-
-  const content =
-    compactLogText(
-      message.content,
-      1200
-    );
-
-  const urls =
-    extractUrls(
-      message.content
-    );
-
-  const attachments =
-    attachmentSummary(
-      message.attachments
-    );
-
-  const lines = [];
-
-  lines.push(
-    `💬 ${authorName} » "${escapeLogQuote(
-      content ||
-      (
-        attachments.length
-          ? '[Tệp đính kèm]'
-          : '[Không có nội dung văn bản]'
-      )
-    )}"`
-  );
-
-  if (
-    urls.length >
-    0
-  ) {
-    lines.push(
-      `🔗 Liên kết: ${urls.join(
-        ' • '
-      )}`
-    );
-  }
-
-  if (
-    attachments.length >
-    0
-  ) {
-    lines.push(
-      `📎 Tệp đính kèm: ${attachments
-        .map(
-          item =>
-            item.name
-        )
-        .join(' • ')}`
-    );
-  }
-
-  lines.push(
-    vietnamTime(
-      message.createdAt ||
-      new Date()
-    )
-  );
+  const roomName = compactLogText(message.channel?.name || 'Không xác định', 80);
+  const authorName = messageAuthorName(message);
+  const content = compactLogText(message.content, 1200) || '[Không có nội dung văn bản]';
+  const safeContent = content.replace(/`/g, 'ˋ');
 
   await logChannel.send({
-    content:
-      lines.join(
-        '\n'
-      ),
-    allowedMentions: {
-      parse: []
-    }
+    content: `${roomName}  @${authorName} : \`${safeContent}\`  ${vietnamTime(message.createdAt || new Date())}`,
+    allowedMentions: { parse: [] }
   });
 
-  if (
-    attachments.length >
-    0
-  ) {
-    const archiveResult =
-      await archiveAttachments(
-        logChannel,
-        message,
-        message.attachments
-      );
+  const imageAttachments = message.attachments?.filter(
+    attachment => String(attachment.contentType || '').toLowerCase().startsWith('image/')
+  );
 
-    if (
-      archiveResult.failed.length >
-      0
-    ) {
-      const failedLines =
-        archiveResult.failed
-          .map(
-            item =>
-              `• ${item.name} — ${item.url || 'Không có URL'}`
-          )
-          .join(
-            '\n'
-          );
-
-      await logChannel.send({
-        content: [
-          '⚠️ Không thể lưu bản sao của một số tệp. Giữ lại thông tin/URL gốc:',
-          failedLines
-        ].join('\n'),
-        allowedMentions: {
-          parse: []
-        }
-      });
-    }
+  if (imageAttachments?.size) {
+    await archiveAttachments(logChannel, message, imageAttachments);
   }
 }
 
@@ -9127,166 +9078,44 @@ async function hydratePartialMessage(
   }
 }
 
-async function sendChatEditLog(
-  oldMessage,
-  newMessage
-) {
-  newMessage =
-    await hydratePartialMessage(
-      newMessage
-    );
-
-  if (
-    !newMessage ||
-    !newMessage.guild ||
-    newMessage.author?.bot
-  ) {
-    return;
-  }
-
+async function sendChatEditLog(oldMessage, newMessage) {
+  newMessage = await hydratePartialMessage(newMessage);
+  if (!newMessage || !newMessage.guild || newMessage.author?.bot) return;
   if (!(await shouldTrackChatChannel(newMessage.guild.id, newMessage.channelId))) return;
 
-  const logChannel =
-    await getChatLogChannel(
-      newMessage.guild
-    );
+  const logChannel = await getChatLogChannel(newMessage.guild);
+  if (!logChannel || newMessage.channelId === logChannel.id) return;
 
-  if (
-    !logChannel ||
-    newMessage.channelId ===
-    logChannel.id
-  ) {
-    return;
-  }
+  const before = compactLogText(oldMessage?.content, 700);
+  const after = compactLogText(newMessage.content, 700);
+  if (before === after) return;
 
-  const before =
-    compactLogText(
-      oldMessage?.content,
-      900
-    );
-
-  const after =
-    compactLogText(
-      newMessage.content,
-      900
-    );
-
-  if (
-    before ===
-      after
-  ) {
-    return;
-  }
-
-  const authorName =
-    messageAuthorName(
-      newMessage
-    );
+  const roomName = compactLogText(newMessage.channel?.name || 'Không xác định', 80);
+  const authorName = messageAuthorName(newMessage);
+  const safeBefore = (before || '[Không lấy được nội dung cũ]').replace(/`/g, 'ˋ');
+  const safeAfter = (after || '[Không có nội dung]').replace(/`/g, 'ˋ');
 
   await logChannel.send({
-    content: [
-      `✏️ ${authorName} » Chỉnh sửa tin nhắn`,
-      `Trước: "${escapeLogQuote(
-        before ||
-        '[Không lấy được nội dung cũ]'
-      )}"`,
-      `Sau: "${escapeLogQuote(
-        after ||
-        '[Không có nội dung]'
-      )}"`,
-      vietnamTime()
-    ].join('\n'),
-    allowedMentions: {
-      parse: []
-    }
+    content: `${roomName}  @${authorName} : ✏️ \`${safeBefore}\` → \`${safeAfter}\`  ${vietnamTime()}`,
+    allowedMentions: { parse: [] }
   });
 }
 
-async function sendChatDeleteLog(
-  message
-) {
-  if (
-    !message ||
-    !message.guild
-  ) {
-    return;
-  }
-
-  if (
-    message.author?.bot
-  ) {
-    return;
-  }
-
+async function sendChatDeleteLog(message) {
+  if (!message || !message.guild || message.author?.bot) return;
   if (!(await shouldTrackChatChannel(message.guild.id, message.channelId))) return;
 
-  const logChannel =
-    await getChatLogChannel(
-      message.guild
-    );
+  const logChannel = await getChatLogChannel(message.guild);
+  if (!logChannel || message.channelId === logChannel.id) return;
 
-  if (
-    !logChannel ||
-    message.channelId ===
-    logChannel.id
-  ) {
-    return;
-  }
-
-  const authorName =
-    messageAuthorName(
-      message
-    );
-
-  const content =
-    compactLogText(
-      message.content,
-      1200
-    );
-
-  const attachments =
-    attachmentSummary(
-      message.attachments
-    );
-
-  const lines = [
-    `🗑️ ${authorName} » Xóa tin nhắn`,
-    `"${escapeLogQuote(
-      content ||
-      (
-        attachments.length
-          ? '[Tin nhắn có tệp đính kèm]'
-          : '[Không lấy được nội dung]'
-      )
-    )}"`
-  ];
-
-  if (
-    attachments.length >
-    0
-  ) {
-    lines.push(
-      `📎 Tệp: ${attachments
-        .map(
-          item =>
-            item.name
-        )
-        .join(' • ')}`
-    );
-  }
-
-  lines.push(
-    vietnamTime()
-  );
+  const roomName = compactLogText(message.channel?.name || 'Không xác định', 80);
+  const authorName = messageAuthorName(message);
+  const content = compactLogText(message.content, 1200) || '[Không lấy được nội dung]';
+  const safeContent = content.replace(/`/g, 'ˋ');
 
   await logChannel.send({
-    content:
-      lines.join(
-        '\n'
-      ),
-    allowedMentions: {
-      parse: []
-    }
+    content: `${roomName}  @${authorName} : 🗑️ \`${safeContent}\`  ${vietnamTime()}`,
+    allowedMentions: { parse: [] }
   });
 }
 
@@ -11944,6 +11773,21 @@ async function routeButtonInteraction(
     return;
   }
 
+  if (interaction.customId.startsWith('room_trusted_name:')) {
+    await safeDeferUpdate(interaction);
+    return;
+  }
+
+  if (interaction.customId.startsWith('room_trusted_page:')) {
+    await safeDeferUpdate(interaction);
+    const page = Number(interaction.customId.split(':')[1]);
+    const channel = interaction.channel;
+    if (!channel?.isVoiceBased?.()) return;
+    const payload = (await buildRoomTrustedPayloads(channel, Number.isFinite(page) ? page : 0))[0];
+    try { await interaction.message.edit(payload); } catch (error) { logError(`TRUSTED_PAGE:${channel.id}`, error); }
+    return;
+  }
+
 
   switch (
     interaction.customId
@@ -12022,6 +11866,10 @@ async function routeButtonInteraction(
 
     case 'room_fix_panel':
       await handleRoomFixPanel(interaction);
+      return;
+
+    case 'room_clear_chat':
+      await handleRoomClearChat(interaction);
       return;
 
     case 'room_trust':
