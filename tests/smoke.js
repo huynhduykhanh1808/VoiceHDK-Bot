@@ -14,6 +14,8 @@ assert(src.indexOf("mk('room_mute_toggle'") < src.indexOf("mk('room_kick'"), 'mu
 assert(src.indexOf("mk('room_kick'") < src.indexOf("mk('room_deny'"), 'kick must appear before ban');
 assert(!src.includes("mk('room_untrust'"), 'old untrust button must be removed');
 assert(src.includes("room_untrust_member:"), 'trusted remove button missing');
+assert(src.includes("room_trusted_name:"), 'trusted member display button missing');
+assert(src.includes("interaction.customId.startsWith('room_trusted_name:')"), 'trusted member display button must be acknowledged silently');
 assert(!src.includes("room_trusted_page:"), 'trusted pagination buttons must be removed');
 assert(src.includes('buildRoomTrustedPayloads'), 'trusted multi-message payload builder missing');
 assert(src.includes('findRoomTrustedContinuationMessages'), 'trusted continuation message sync missing');
@@ -29,6 +31,8 @@ assert(src.indexOf('.addActionRowComponents(regionRow)') < src.indexOf('.addActi
 assert(src.includes('.addActionRowComponents(memberRow);'), 'member select row missing');
 assert(src.includes(".setStyle(ButtonStyle.Secondary)"), 'trusted remove button must use neutral dark background');
 assert(src.includes(".setStyle(ButtonStyle.Primary)"), 'trusted member button must stay bright');
+const trustedRowSource = src.slice(src.indexOf('function buildTrustedMemberRow'), src.indexOf('async function getTrustedGuildMembers'));
+assert(!trustedRowSource.includes('.setDisabled(true)'), 'trusted member button must not be disabled/dimmed');
 assert(src.includes("new AttachmentBuilder(roomCard, { name: 'room-panel.png' })"), 'room card attachment missing');
 assert(src.includes(".setImage('attachment://room-panel.png')"), 'room card image missing');
 assert(src.includes('trustedCount,'), 'trusted count must be passed to room card');
