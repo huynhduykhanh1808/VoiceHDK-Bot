@@ -4631,10 +4631,13 @@ async function buildRoomPanelPayload(
 }
 
 function buildTrustedMemberRow(member) {
+  const rawName = safeMemberName(member).slice(0, 54) || member.id;
+  const spacerCount = Math.max(0, 54 - Array.from(rawName).length);
+  const displayName = `${rawName}${'⠀'.repeat(spacerCount)}`.slice(0, 80);
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`room_trusted_name:${member.id}`)
-      .setLabel(safeMemberName(member).slice(0, 80) || member.id)
+      .setLabel(displayName)
       .setEmoji('❤️')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
@@ -4679,7 +4682,7 @@ async function buildRoomTrustedPayloads(channel, requestedPage = 0) {
     .setAccentColor(0xA7B8FF)
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `### ・❥・ ❤️ NGƯỜI TIN CẬY ・❥・\n-# Những thành viên được chủ phòng tin cậy · ${members.length} người${pageCount > 1 ? ` · Trang ${page + 1}/${pageCount}` : ''}`
+        `### ・❥・ ❤ NGƯỜI TIN CẬY ❤ ・❥・\n-# Những thành viên được chủ phòng tin cậy · ${members.length} người${pageCount > 1 ? ` · Trang ${page + 1}/${pageCount}` : ''}`
       )
     );
 
