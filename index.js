@@ -5952,71 +5952,71 @@ async function refreshRoomAfterVoiceChange(
 }
 
 async function getOwnerRoomContext(
-  interaction
+  interaction,
+  { ownerOnly = false } = {}
 ) {
   if (
     !interaction.guild ||
     !interaction.channel ||
-    interaction.channel.type !==
-      ChannelType.GuildVoice
+    interaction.channel.type !== ChannelType.GuildVoice
   ) {
     return {
       ok: false,
-      message:
-        '❌ Bảng điều khiển này không còn nằm trong phòng thoại hợp lệ.'
+      message: '❌ Bảng điều khiển này không còn nằm trong phòng thoại hợp lệ.'
     };
   }
 
-  const room =
-    await getRoom(
-      interaction.channel.id
-    );
-
+  const room = await getRoom(interaction.channel.id);
   if (!room) {
     return {
       ok: false,
-      message:
-        '❌ Phòng này không còn được VoiceHDK Bot quản lý.'
+      message: '❌ Phòng này không còn được VoiceHDK Bot quản lý.'
     };
   }
 
-  if (
-    String(
-      room.owner_id
-    ) !==
-    interaction.user.id
-  ) {
+  const actor = await getGuildMember(interaction.guild, interaction.user.id);
+  if (!actor || actor.voice?.channelId !== interaction.channel.id) {
     return {
       ok: false,
-      message:
-        '❌ Chỉ chủ phòng mới có thể sử dụng chức năng này.'
+      message: '❌ Bạn phải đang ở trong phòng để sử dụng chức năng này.'
     };
   }
 
-  const owner =
-    await getGuildMember(
-      interaction.guild,
-      interaction.user.id
-    );
+  const isOwner = String(room.owner_id) === interaction.user.id;
+  let isTrusted = false;
+  if (!isOwner && !ownerOnly) {
+    const trusted = await getTrustedMembers(interaction.channel.id);
+    isTrusted = trusted.some(row => String(row.member_id) === interaction.user.id);
+  }
 
-  if (
-    !owner ||
-    owner.voice?.channelId !==
-      interaction.channel.id
-  ) {
+  if (!isOwner && (!isTrusted || ownerOnly)) {
     return {
       ok: false,
-      message:
-        '❌ Chủ phòng phải đang ở trong phòng để sử dụng chức năng này.'
+      message: ownerOnly
+        ? '❌ Chỉ chủ phòng mới có thể sử dụng chức năng này.'
+        : '❌ Chỉ chủ phòng hoặc Người Tin cậy được chủ phòng ủy quyền mới có thể sử dụng chức năng này.'
+    };
+  }
+
+  const owner = isOwner
+    ? actor
+    : await getGuildMember(interaction.guild, String(room.owner_id));
+
+  if (!owner) {
+    return {
+      ok: false,
+      message: '❌ Không tìm thấy chủ phòng hiện tại.'
     };
   }
 
   return {
     ok: true,
     room,
-    channel:
-      interaction.channel,
-    owner
+    channel: interaction.channel,
+    owner,
+    actor,
+    isOwner,
+    isTrusted
   };
 }
 
@@ -6028,7 +6028,7 @@ async function getRequiredSelectedMember(
     getSelectedMemberId(
       interaction.guild.id,
       context.channel.id,
-      context.owner.id
+      context.actor.id
     );
 
   if (!selectedId) {
@@ -6039,14 +6039,12 @@ async function getRequiredSelectedMember(
     };
   }
 
-  if (
-    selectedId ===
-    context.owner.id
-  ) {
+  if (selectedId === context.owner.id || selectedId === context.actor.id) {
     return {
       ok: false,
-      message:
-        '⚠️ Bạn không thể chọn chính mình cho thao tác này.'
+      message: selectedId === context.owner.id
+        ? '⚠️ Không thể áp dụng thao tác này cho chủ phòng.'
+        : '⚠️ Bạn không thể chọn chính mình cho thao tác này.'
     };
   }
 
@@ -6067,7 +6065,7 @@ async function getRequiredSelectedMember(
     clearSelectedMember(
       interaction.guild.id,
       context.channel.id,
-      context.owner.id
+      context.actor.id
     );
 
     await refreshRoomPanelSafe(
@@ -6142,14 +6140,11 @@ async function handleRoomMemberSelect(
     return;
   }
 
-  if (
-    memberId ===
-    context.owner.id
-  ) {
+  if (memberId === context.owner.id || memberId === context.actor.id) {
     clearSelectedMember(
       interaction.guild.id,
       context.channel.id,
-      context.owner.id
+      context.actor.id
     );
 
     await refreshRoomPanelSafe(
@@ -6158,7 +6153,9 @@ async function handleRoomMemberSelect(
 
     await tempFollowUp(
       interaction,
-      '⚠️ Bạn không cần chọn chính mình.',
+      memberId === context.owner.id
+        ? '⚠️ Không thể chọn chủ phòng cho thao tác quản lý thành viên.'
+        : '⚠️ Bạn không cần chọn chính mình.',
       {
         error: true
       }
@@ -6180,7 +6177,7 @@ async function handleRoomMemberSelect(
     clearSelectedMember(
       interaction.guild.id,
       context.channel.id,
-      context.owner.id
+      context.actor.id
     );
 
     await refreshRoomPanelSafe(
@@ -6201,7 +6198,7 @@ async function handleRoomMemberSelect(
   setSelectedMember(
     interaction.guild.id,
     context.channel.id,
-    context.owner.id,
+    context.actor.id,
     member.id
   );
 }
@@ -6237,7 +6234,27 @@ async function handleRoomClearChat(interaction) {
       if (!batch.size) break;
 
       const removable = batch.filter(message => !isProtectedRoomControlMessage(message));
-      for (const message of removable.values()) {
+      const recent = removable.filter(message => Date.now() - message.createdTimestamp < 13.5 * 24 * 60 * 60 * 1000);
+      const old = removable.filter(message => !recent.has(message.id));
+
+      if (recent.size) {
+        try {
+          const removed = await channel.bulkDelete(recent, true);
+          deleted += removed.size;
+        } catch (error) {
+          logError(`ROOM_CLEAR_CHAT_BULK:${channel.id}`, error);
+          for (const message of recent.values()) {
+            try {
+              await message.delete();
+              deleted += 1;
+            } catch (deleteError) {
+              logError(`ROOM_CLEAR_CHAT_DELETE:${channel.id}:${message.id}`, deleteError);
+            }
+          }
+        }
+      }
+
+      for (const message of old.values()) {
         try {
           await message.delete();
           deleted += 1;
@@ -6332,7 +6349,7 @@ async function handleRoomLock(
         ? '🔒'
         : '🔓',
       safeMemberName(
-        context.owner
+        context.actor
       ),
       `${
         newLocked
@@ -6438,7 +6455,7 @@ async function handleRoomHide(
         ? '🙈'
         : '👁️',
       safeMemberName(
-        context.owner
+        context.actor
       ),
       `${
         newHidden
@@ -6648,7 +6665,7 @@ async function handleRoomRenameModal(
       interaction.guild,
       '✏️',
       safeMemberName(
-        context.owner
+        context.actor
       ),
       `Đổi tên phòng thành ${newName}`
     );
@@ -6845,7 +6862,7 @@ async function handleRoomLimitModal(
       interaction.guild,
       '👥',
       safeMemberName(
-        context.owner
+        context.actor
       ),
       limit === 0
         ? 'Bỏ giới hạn phòng'
@@ -6876,7 +6893,7 @@ async function handleRoomLimitModal(
 
 async function handleRoomTrust(interaction) {
   await safeDeferUpdate(interaction);
-  const context = await getOwnerRoomContext(interaction);
+  const context = await getOwnerRoomContext(interaction, { ownerOnly: true });
   if (!context.ok) return tempFollowUp(interaction, context.message, { error: true });
   const selected = await getRequiredSelectedMember(interaction, context);
   if (!selected.ok) return tempFollowUp(interaction, selected.message, { error: true });
@@ -6886,7 +6903,7 @@ async function handleRoomTrust(interaction) {
     return tempFollowUp(interaction, `❤️ ${safeMemberName(member)} đã là người Tin cậy.`, { error: true });
   }
   await addTrustedMember(context.channel.id, member.id);
-  clearSelectedMember(interaction.guild.id, context.channel.id, context.owner.id);
+  clearSelectedMember(interaction.guild.id, context.channel.id, context.actor.id);
   await refreshRoomPanelSafe(context.channel.id);
   await sendActionLog(interaction.guild, '❤️', context.owner, `Thêm ${safeMemberName(member)} vào danh sách Tin cậy`);
   await tempFollowUp(interaction, `❤️ Đã thêm ${safeMemberName(member)} vào danh sách Tin cậy.`);
@@ -6914,12 +6931,12 @@ async function handleRoomMuteToggle(interaction) {
     muted ? `${BOT_NAME}: bật lại microphone` : `${BOT_NAME}: tắt microphone`
   );
 
-  clearSelectedMember(interaction.guild.id, context.channel.id, context.owner.id);
+  clearSelectedMember(interaction.guild.id, context.channel.id, context.actor.id);
   await refreshRoomPanelSafe(context.channel.id);
   await sendActionLog(
     interaction.guild,
     muted ? '🔊' : '🔇',
-    safeMemberName(context.owner),
+    safeMemberName(context.actor),
     `${muted ? 'Bật lại' : 'Tắt'} quyền nói của ${safeMemberName(member)}`
   );
   await tempFollowUp(
@@ -6932,7 +6949,7 @@ async function handleRoomMuteToggle(interaction) {
 
 async function handleRoomUntrustMember(interaction, memberId) {
   await safeDeferUpdate(interaction);
-  const context = await getOwnerRoomContext(interaction);
+  const context = await getOwnerRoomContext(interaction, { ownerOnly: true });
   if (!context.ok) return tempFollowUp(interaction, context.message, { error: true });
   if (!isSnowflake(String(memberId || ''))) return tempFollowUp(interaction, '❌ Thành viên không hợp lệ.', { error: true });
   const member = await getGuildMember(interaction.guild, memberId);
@@ -7003,13 +7020,13 @@ async function handleRoomInvite(
       await inviteMemberToRoom(
         context.channel,
         member,
-        context.owner
+        context.actor
       );
 
     clearSelectedMember(
       interaction.guild.id,
       context.channel.id,
-      context.owner.id
+      context.actor.id
     );
 
     await refreshRoomPanelSafe(
@@ -7020,7 +7037,7 @@ async function handleRoomInvite(
       interaction.guild,
       '✉️',
       safeMemberName(
-        context.owner
+        context.actor
       ),
       `Mời ${safeMemberName(
         member
@@ -7030,8 +7047,8 @@ async function handleRoomInvite(
     await tempFollowUp(
       interaction,
       inviteResult.dmSent
-        ? `✉️ <@${context.owner.id}> đã mời <@${member.id}> vào **${context.channel.name}**. Lời mời đã được gửi qua DM và quyền xem/kết nối đã được cấp.`
-        : `✉️ <@${context.owner.id}> đã mời <@${member.id}> vào **${context.channel.name}** và đã cấp quyền xem/kết nối, nhưng không thể gửi DM cho thành viên này.`
+        ? `✉️ <@${context.actor.id}> đã mời <@${member.id}> vào **${context.channel.name}**. Lời mời đã được gửi qua DM và quyền xem/kết nối đã được cấp.`
+        : `✉️ <@${context.actor.id}> đã mời <@${member.id}> vào **${context.channel.name}** và đã cấp quyền xem/kết nối, nhưng không thể gửi DM cho thành viên này.`
     );
   } catch (error) {
     logError(
@@ -7101,7 +7118,7 @@ async function handleRoomDeny(
     clearSelectedMember(
       interaction.guild.id,
       context.channel.id,
-      context.owner.id
+      context.actor.id
     );
 
     await refreshRoomPanelSafe(
@@ -7123,12 +7140,14 @@ async function handleRoomDeny(
       member
     );
 
-    await removeTrustedMember(context.channel.id, member.id).catch(() => {});
+    if (context.isOwner) {
+      await removeTrustedMember(context.channel.id, member.id).catch(() => {});
+    }
 
     clearSelectedMember(
       interaction.guild.id,
       context.channel.id,
-      context.owner.id
+      context.actor.id
     );
 
     await removeMemberPresence(
@@ -7146,7 +7165,7 @@ async function handleRoomDeny(
       interaction.guild,
       '⛔',
       safeMemberName(
-        context.owner
+        context.actor
       ),
       `Cấm ${safeMemberName(
         member
@@ -7227,7 +7246,7 @@ async function handleRoomKick(
     clearSelectedMember(
       interaction.guild.id,
       context.channel.id,
-      context.owner.id
+      context.actor.id
     );
 
     await refreshRoomPanelSafe(
@@ -7254,7 +7273,7 @@ async function handleRoomKick(
     clearSelectedMember(
       interaction.guild.id,
       context.channel.id,
-      context.owner.id
+      context.actor.id
     );
 
     await removeMemberPresence(
@@ -7272,7 +7291,7 @@ async function handleRoomKick(
       interaction.guild,
       '👢',
       safeMemberName(
-        context.owner
+        context.actor
       ),
       `Đuổi ${safeMemberName(
         member
@@ -7448,7 +7467,7 @@ async function handleRoomResetConfirm(
     clearSelectedMember(
       interaction.guild.id,
       context.channel.id,
-      context.owner.id
+      context.actor.id
     );
 
     await refreshRoomPanelSafe(
@@ -7459,7 +7478,7 @@ async function handleRoomResetConfirm(
       interaction.guild,
       '♻️',
       safeMemberName(
-        context.owner
+        context.actor
       ),
       `Đặt lại phòng ${context.channel.name}`
     );
@@ -7667,7 +7686,7 @@ async function handleRoomRegionSelect(
       interaction.guild,
       '🌐',
       safeMemberName(
-        context.owner
+        context.actor
       ),
       `Đổi khu vực: ${displayRegion}`
     );
@@ -7700,7 +7719,8 @@ async function handleRoomTransferButton(
 
   const context =
     await getOwnerRoomContext(
-      interaction
+      interaction,
+      { ownerOnly: true }
     );
 
   if (!context.ok) {
@@ -7743,7 +7763,7 @@ async function handleRoomTransferButton(
     clearSelectedMember(
       interaction.guild.id,
       context.channel.id,
-      context.owner.id
+      context.actor.id
     );
 
     await refreshRoomPanelSafe(
@@ -7808,7 +7828,7 @@ async function handleRoomTransferButton(
     clearSelectedMember(
       interaction.guild.id,
       context.channel.id,
-      context.owner.id
+      context.actor.id
     );
 
     await createTransferRequest(
