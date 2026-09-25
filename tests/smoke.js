@@ -28,8 +28,8 @@ assert(src.includes('Những thành viên được chủ phòng tin cậy · ${m
 assert(src.includes("JSON.stringify(message.components || []).includes('NGƯỜI TIN CẬY')"), 'empty trusted panels must be discoverable for FIX cleanup');
 assert(src.includes(".setEmoji('❌')"), 'compact trusted remove button missing');
 
-assert(src.includes("const spacerCount = Math.max(0, 54 - Array.from(rawName).length);"), 'trusted name row width padding missing');
-assert(src.includes("'⠀'.repeat(spacerCount)"), 'trusted row must push remove button toward the right edge');
+assert(src.includes("const displayName = safeMemberName(member).slice(0, 32) || member.id;"), 'trusted member label must stay compact enough for name and remove button on one row');
+assert(!src.includes('spacerCount'), 'trusted member row must not use artificial width padding that can wrap the remove button');
 assert(!src.includes(".setLabel('XÓA')"), 'trusted remove button must not have a long label');
 assert(src.includes("{ Speak: muted ? true : false }"), 'mute toggle must only edit Speak');
 assert(src.includes('control_aux_message_id'), 'second panel message persistence missing');
