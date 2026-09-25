@@ -4636,8 +4636,7 @@ function buildTrustedMemberRow(member) {
       .setCustomId(`room_trusted_name:${member.id}`)
       .setLabel(safeMemberName(member).slice(0, 80) || member.id)
       .setEmoji('❤️')
-      .setStyle(ButtonStyle.Primary)
-      .setDisabled(true),
+      .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId(`room_untrust_member:${member.id}`)
       .setEmoji('❌')
@@ -11944,6 +11943,11 @@ async function routeButtonInteraction(
 ) {
   if (interaction.customId.startsWith('room_untrust_member:')) {
     await handleRoomUntrustMember(interaction, interaction.customId.split(':')[1]);
+    return;
+  }
+
+  if (interaction.customId.startsWith('room_trusted_name:')) {
+    await safeDeferUpdate(interaction);
     return;
   }
 
