@@ -4630,7 +4630,31 @@ async function buildRoomPanelPayload(
   return { ...dashboard, components: buildRoomButtons(channel) };
 }
 
-async function buildRoomAuxPayload(channel, room) {
+function buildTrustedMemberRow(member) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`room_trusted_name:${member.id}`)
+      .setLabel(safeMemberName(member).slice(0, 80) || member.id)
+      .setEmoji('❤️')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(`room_untrust_member:${member.id}`)
+      .setEmoji('❌')
+      .setStyle(ButtonStyle.Secondary)
+  );
+}
+
+async function getTrustedGuildMembers(channel) {
+  const trusted = await getTrustedMembers(channel.id);
+  const members = [];
+  for (const row of trusted) {
+    const member = await getGuildMember(channel.guild, String(row.member_id));
+    if (member) members.push(member);
+  }
+  return members;
+}
+
+async function buildRoomAuxPayloads(channel, room) {
   const regionRow = await buildRegionSelectRow(channel);
   const memberRow = buildMemberSelectRow();
   const container = new ContainerBuilder()
@@ -4638,71 +4662,63 @@ async function buildRoomAuxPayload(channel, room) {
     .addActionRowComponents(regionRow)
     .addActionRowComponents(memberRow);
 
-  return {
+  return [{
     components: [container],
     flags: MessageFlags.IsComponentsV2,
     allowedMentions: { parse: [] }
-  };
+  }];
 }
 
-async function buildRoomTrustedPayloads(channel) {
-  const trusted = await getTrustedMembers(channel.id);
-  const members = [];
-  for (const row of trusted) {
-    const member = await getGuildMember(channel.guild, String(row.member_id));
-    if (member) members.push(member);
-  }
-
-  const pageSize = 5;
-  const pages = [];
+async function buildRoomTrustedPayloads(channel, requestedPage = 0) {
+  const members = await getTrustedGuildMembers(channel);
+  const pageSize = 8;
   const pageCount = Math.max(1, Math.ceil(members.length / pageSize));
+  const page = Math.max(0, Math.min(Number(requestedPage) || 0, pageCount - 1));
+  const pageMembers = members.slice(page * pageSize, (page + 1) * pageSize);
+  const container = new ContainerBuilder()
+    .setAccentColor(0xA7B8FF)
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        `### ・❥・ ❤️ NGƯỜI TIN CẬY ・❥・\n-# Những thành viên được chủ phòng tin cậy · ${members.length} người${pageCount > 1 ? ` · Trang ${page + 1}/${pageCount}` : ''}`
+      )
+    );
 
-  for (let page = 0; page < pageCount; page += 1) {
-    const shown = members.slice(page * pageSize, page * pageSize + pageSize);
-    const title = page === 0
-      ? '### ・❥・ ❤️ NGƯỜI TIN CẬY ・❥・'
-      : `### ・❥・ ❤️ NGƯỜI TIN CẬY · ${page + 1} ・❥・`;
-    const subtitle = page === 0
-      ? `-# Những thành viên được chủ phòng tin cậy · ${members.length} người`
-      : `-# Tiếp nối danh sách · ${members.length} người`;
-    const container = new ContainerBuilder()
-      .setAccentColor(0x8899E8)
-      .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(`${title}\n${subtitle}`)
-      );
-
-    if (!shown.length) {
-      container.addTextDisplayComponents(
-        new TextDisplayBuilder().setContent('-# Chưa có thành viên nào trong danh sách Tin cậy.')
-      );
-    } else {
-      for (const member of shown) {
-        container.addActionRowComponents(
-          new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-              .setCustomId(`room_trusted_name:${member.id}`)
-              .setLabel(safeMemberName(member).slice(0, 80) || member.id)
-              .setEmoji('❤️')
-              .setStyle(ButtonStyle.Primary)
-              .setDisabled(true),
-            new ButtonBuilder()
-              .setCustomId(`room_untrust_member:${member.id}`)
-              .setLabel('XÓA')
-              .setEmoji('❌')
-              .setStyle(ButtonStyle.Danger)
-          )
-        );
-      }
+  if (!pageMembers.length) {
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent('-# Chưa có thành viên nào trong danh sách Tin cậy.')
+    );
+  } else {
+    for (const member of pageMembers) {
+      container.addActionRowComponents(buildTrustedMemberRow(member));
     }
-
-    pages.push({
-      components: [container],
-      flags: MessageFlags.IsComponentsV2,
-      allowedMentions: { parse: [] }
-    });
   }
 
-  return pages;
+  if (pageCount > 1) {
+    container.addActionRowComponents(
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`room_trusted_page:${page - 1}`)
+          .setLabel('‹')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(page === 0),
+        new ButtonBuilder()
+          .setCustomId(`room_trusted_page:${page + 1}`)
+          .setLabel('›')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(page === pageCount - 1)
+      )
+    );
+  }
+
+  return [{
+    components: [container],
+    flags: MessageFlags.IsComponentsV2,
+    allowedMentions: { parse: [] }
+  }];
+}
+
+async function buildRoomAuxPayload(channel, room) {
+  return (await buildRoomAuxPayloads(channel, room))[0];
 }
 
 function isRoomPanelMessage(
@@ -4778,9 +4794,10 @@ async function findRoomAuxMessages(channel) {
   }
 }
 
-function isRoomTrustedMessage(message) {
+function isRoomTrustedContinuationMessage(message) {
   if (!message || message.author?.id !== client.user?.id) return false;
   const ids = collectComponentCustomIds(message.components || []);
+  if (ids.includes('room_region')) return false;
   if (ids.some(id => id.startsWith('room_untrust_member:'))) return true;
   try {
     return JSON.stringify(message.components || []).includes('NGƯỜI TIN CẬY');
@@ -4789,47 +4806,16 @@ function isRoomTrustedMessage(message) {
   }
 }
 
-async function findRoomTrustedMessages(channel) {
+async function findRoomTrustedContinuationMessages(channel) {
   if (!channel?.messages) return [];
   try {
-    const messages = await channel.messages.fetch({ limit: 100 });
+    const messages = await channel.messages.fetch({ limit: 50 });
     return Array.from(messages.values())
-      .filter(isRoomTrustedMessage)
+      .filter(isRoomTrustedContinuationMessage)
       .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
   } catch (error) {
-    logError(`FIND_TRUSTED_PANEL:${channel.id}`, error);
+    logError(`FIND_TRUSTED_CONTINUATIONS:${channel.id}`, error);
     return [];
-  }
-}
-
-async function syncRoomTrustedMessages(channel, { forceRebuild = false } = {}) {
-  const payloads = await buildRoomTrustedPayloads(channel);
-  let messages = await findRoomTrustedMessages(channel);
-
-  if (forceRebuild && messages.length) {
-    for (const message of messages) {
-      try { await message.delete(); } catch {}
-    }
-    messages = [];
-  }
-
-  for (let index = 0; index < payloads.length; index += 1) {
-    const payload = payloads[index];
-    const message = messages[index];
-    if (!message) {
-      await channel.send(payload);
-      continue;
-    }
-    try {
-      await message.edit(payload);
-    } catch {
-      try { await message.delete(); } catch {}
-      await channel.send(payload);
-    }
-  }
-
-  for (let index = payloads.length; index < messages.length; index += 1) {
-    try { await messages[index].delete(); } catch {}
   }
 }
 
@@ -5022,16 +5008,24 @@ async function refreshRoomPanelSafe(
         panelMessage.id
       );
 
-      const auxPayload = await buildRoomAuxPayload(channel, room);
+      const auxPayloads = await buildRoomAuxPayloads(channel, room);
+      const auxPayload = auxPayloads[0];
       let auxMessage = null;
       if (!forceRebuild && room.control_aux_message_id) {
         auxMessage = await fetchMessageSafe(channel, String(room.control_aux_message_id));
         if (auxMessage && !isRoomAuxMessage(auxMessage)) auxMessage = null;
       }
       const discoveredAux = await findRoomAuxMessages(channel);
-      if (forceRebuild && auxMessage) {
-        try { await auxMessage.delete(); } catch {}
-        auxMessage = null;
+      let continuationMessages = await findRoomTrustedContinuationMessages(channel);
+      if (forceRebuild) {
+        if (auxMessage) {
+          try { await auxMessage.delete(); } catch {}
+          auxMessage = null;
+        }
+        for (const message of continuationMessages) {
+          try { await message.delete(); } catch {}
+        }
+        continuationMessages = [];
       }
       if (!auxMessage && !forceRebuild && discoveredAux.length) auxMessage = discoveredAux[0];
       if (!auxMessage) auxMessage = await channel.send(auxPayload);
@@ -5042,7 +5036,21 @@ async function refreshRoomPanelSafe(
       await setControlAuxMessage(channel.id, auxMessage.id);
       const allAux = await findRoomAuxMessages(channel);
       await deleteDuplicatePanels(allAux, auxMessage.id);
-      await syncRoomTrustedMessages(channel, { forceRebuild });
+
+      const trustedPayloads = await buildRoomTrustedPayloads(channel);
+      for (let i = 0; i < trustedPayloads.length; i += 1) {
+        const trustedPayload = trustedPayloads[i];
+        const existing = continuationMessages[i];
+        if (existing) {
+          try { await existing.edit(trustedPayload); }
+          catch { continuationMessages[i] = await channel.send(trustedPayload); }
+        } else {
+          continuationMessages[i] = await channel.send(trustedPayload);
+        }
+      }
+      for (let i = trustedPayloads.length; i < continuationMessages.length; i += 1) {
+        try { await continuationMessages[i].delete(); } catch {}
+      }
 
       const allPanels =
         await findRoomPanelMessages(
@@ -11951,6 +11959,22 @@ async function routeButtonInteraction(
     await handleRoomUntrustMember(interaction, interaction.customId.split(':')[1]);
     return;
   }
+
+  if (interaction.customId.startsWith('room_trusted_name:')) {
+    await safeDeferUpdate(interaction);
+    return;
+  }
+
+  if (interaction.customId.startsWith('room_trusted_page:')) {
+    await safeDeferUpdate(interaction);
+    const page = Number(interaction.customId.split(':')[1]);
+    const channel = interaction.channel;
+    if (!channel?.isVoiceBased?.()) return;
+    const payload = (await buildRoomTrustedPayloads(channel, Number.isFinite(page) ? page : 0))[0];
+    try { await interaction.message.edit(payload); } catch (error) { logError(`TRUSTED_PAGE:${channel.id}`, error); }
+    return;
+  }
+
 
   switch (
     interaction.customId
